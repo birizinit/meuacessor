@@ -27,7 +27,7 @@ export function Header() {
         <div className="flex flex-wrap justify-between items-center gap-5">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-[60px]">
             <Link href="/" className="flex items-center gap-2.5">
-              <Image src="/assets/Subtract.jpg" alt="Assessor Logo" width={39} height={49} />
+              <Image src="/assets/Subtract.svg" alt="Assessor Logo" width={39} height={49} />
               <div className="flex flex-col text-white">
                 <span className="font-[Public_Sans] font-extrabold text-[14.7px] leading-none">meu</span>
                 <span className="font-[Public_Sans] font-extrabold text-[26.8px] leading-none">assessor</span>
@@ -69,7 +69,7 @@ export function Header() {
                   </span>
                 )}
               </div>
-              <Image src="/assets/Ellipse.jpg" alt="User Avatar" width={44} height={44} className="rounded-full" />
+              <Image src="/assets/Ellipse.svg" alt="User Avatar" width={44} height={44} className="rounded-full" />
             </div>
           </div>
         </div>
