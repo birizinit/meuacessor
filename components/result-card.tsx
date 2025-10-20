@@ -44,7 +44,7 @@ export function ResultCard({ dateRange }: ResultCardProps) {
       </div>
       <div className="flex items-center gap-4 mb-5">
         <div className="w-[45px] h-[45px] bg-[#16c784] rounded-[10px] flex items-center justify-center">
-          <Image src="/assets/seta diagonal direita.jpg" alt="Up" width={13} height={13} />
+          <Image src="/assets/seta diagonal direita.svg" alt="Up" width={13} height={13} />
         </div>
         <p className="text-[35px] font-semibold text-white">{formatCurrency(result.value)}</p>
         <span className="bg-[rgba(2,177,90,0.15)] text-[#16c784] text-xs px-2 py-1 rounded-[10px]">

@@ -131,7 +131,7 @@ export function Filters({ selectedPeriod, onPeriodChange, currentMonth, onMonthC
                   <span>
                     {dateRange.start} até {dateRange.end}
                   </span>
-                  <Image src="/assets/seta baixo.jpg" alt="Dropdown" width={12} height={12} />
+                  <Image src="/assets/seta baixo.svg" alt="Dropdown" width={12} height={12} />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-[#1d1d41] border-[rgba(174,171,216,0.53)]" align="end">

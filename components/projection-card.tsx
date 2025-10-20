@@ -80,12 +80,12 @@ export function ProjectionCard() {
         <div className="absolute bottom-0 w-full flex justify-between items-end text-sm">
           <span className="text-[#f2474a] flex items-center gap-1">
             R$0
-            <Image src="/assets/ARROWDOWN.jpg" alt="Down" width={12} height={12} />
+            <Image src="/assets/ARROWDOWN.svg" alt="Down" width={12} height={12} />
           </span>
           <span className="text-white">Conservador</span>
           <span className="text-green-500 flex items-center gap-1">
             R$261
-            <Image src="/assets/arrow-up.jpg" alt="Up" width={12} height={12} />
+            <Image src="/assets/arrow-up.svg" alt="Up" width={12} height={12} />
           </span>
         </div>
       </div>
