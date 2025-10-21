@@ -37,6 +37,14 @@ export function Header() {
       router.push("/operacoes")
       return
     }
+    if (item === "Tutoriais") {
+      router.push("/tutoriais")
+      return
+    }
+    if (item === "Meu perfil") {
+      router.push("/perfil")
+      return
+    }
   }
 
   return (
