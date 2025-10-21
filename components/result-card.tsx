@@ -65,7 +65,7 @@ export function ResultCard({ dateRange }: ResultCardProps) {
       {/* Gráfico */}
       <div className="relative w-full h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#16c784" stopOpacity={0.3} />
@@ -79,6 +79,20 @@ export function ResultCard({ dateRange }: ResultCardProps) {
               strokeWidth={2}
               fill="url(#colorValue)"
               animationDuration={1000}
+              dot={(props: any) => {
+                const { cx, cy, index } = props
+                if (index === 0) return null
+                const prev = chartData[index - 1]?.value
+                const curr = chartData[index]?.value
+                const isUp = prev !== undefined && curr >= prev
+                const color = isUp ? "#16c784" : "#f2474a"
+                return (
+                  <g>
+                    <circle cx={cx} cy={cy} r={6} fill={color} className="blink-ring" opacity={0.35} />
+                    <circle cx={cx} cy={cy} r={3} fill={color} className="blink-point" />
+                  </g>
+                )
+              }}
             />
           </AreaChart>
         </ResponsiveContainer>
