@@ -29,14 +29,14 @@ export function ProjectionCard() {
   const COLORS = ["#22c55e", "#27264e"]
 
   return (
-    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6 flex flex-col">
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
+    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-5 flex flex-col">
+      <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
         <h4 className="text-lg font-semibold text-white">Projeção salva</h4>
         <div className="flex items-center border border-[rgba(174,171,216,0.53)] rounded-[50px] p-1">
           <Button
             variant="ghost"
             onClick={() => setPeriod("day")}
-            className={`rounded-[50px] px-4 py-2 text-sm ${
+            className={`rounded-[50px] px-3.5 py-1.5 text-sm ${
               period === "day" ? "bg-[#845bf6] text-white" : "bg-transparent text-[#aeabd8]"
             }`}
           >
@@ -45,7 +45,7 @@ export function ProjectionCard() {
           <Button
             variant="ghost"
             onClick={() => setPeriod("month")}
-            className={`rounded-[50px] px-4 py-2 text-sm ${
+            className={`rounded-[50px] px-3.5 py-1.5 text-sm ${
               period === "month" ? "bg-[#845bf6] text-white" : "bg-transparent text-[#aeabd8]"
             }`}
           >
@@ -53,7 +53,7 @@ export function ProjectionCard() {
           </Button>
         </div>
       </div>
-      <div className="relative mx-auto w-[260px] h-[220px] my-6">
+      <div className="relative mx-auto w-[240px] h-[190px] my-3">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -62,8 +62,8 @@ export function ProjectionCard() {
               cy="50%"
               startAngle={180}
               endAngle={0}
-              innerRadius={70}
-              outerRadius={105}
+              innerRadius={60}
+              outerRadius={90}
               paddingAngle={0}
               dataKey="value"
             >
@@ -91,7 +91,7 @@ export function ProjectionCard() {
       </div>
       <Button
         variant="outline"
-        className="w-full bg-transparent border border-[rgba(174,171,216,0.53)] text-[#aeabd8] rounded-[10px] py-3 text-base mt-auto hover:bg-[#27264e]/50"
+        className="w-full bg-transparent border border-[rgba(174,171,216,0.53)] text-[#aeabd8] rounded-[10px] py-2 text-sm hover:bg-[#27264e]/50"
       >
         Visualizar operações
       </Button>
