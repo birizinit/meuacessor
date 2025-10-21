@@ -57,7 +57,7 @@ export default function DashboardPage() {
             {/* Right Column */}
             <div className="flex-[1.6] flex flex-col gap-6">
               <BalanceCard dateRange={dateRange} />
-              <div className="flex flex-col lg:flex-row lg:items-start gap-7">
+              <div className="flex flex-col lg:flex-row lg:items-start gap-5">
                 <div className="flex-[1.85]">
                   <TopOperationsCard dateRange={dateRange} />
                 </div>
