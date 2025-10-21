@@ -48,7 +48,7 @@ export default function DashboardPage() {
       />
       <main className="pb-12">
         <div className="container mx-auto px-4 md:px-10 lg:px-[124px] max-w-[1920px]">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-7">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-7">
             {/* Left Column */}
             <div className="flex-1 flex flex-col gap-5">
               <ResultCard dateRange={dateRange} />
@@ -57,7 +57,7 @@ export default function DashboardPage() {
             {/* Right Column */}
             <div className="flex-[1.6] flex flex-col gap-6">
               <BalanceCard dateRange={dateRange} />
-              <div className="flex flex-col lg:flex-row lg:items-end gap-7">
+              <div className="flex flex-col lg:flex-row lg:items-start gap-7">
                 <div className="flex-[1.85]">
                   <TopOperationsCard dateRange={dateRange} />
                 </div>
