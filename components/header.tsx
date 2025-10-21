@@ -2,22 +2,40 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Bell } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 export function Header() {
+  const pathname = usePathname()
   const [activeNav, setActiveNav] = useState("Home")
   const [notificationCount] = useState(4)
   const router = useRouter()
 
   const navItems = ["Home", "Operações", "Tutoriais", "Meu perfil", "Sair"]
 
+  useEffect(() => {
+    if (pathname === "/operacoes") {
+      setActiveNav("Operações")
+    } else {
+      setActiveNav("Home")
+    }
+  }, [pathname])
+
   const handleNavClick = (item: string) => {
     setActiveNav(item)
     if (item === "Sair") {
       localStorage.removeItem("isAuthenticated")
       router.push("/login")
+      return
+    }
+    if (item === "Home") {
+      router.push("/")
+      return
+    }
+    if (item === "Operações") {
+      router.push("/operacoes")
+      return
     }
   }
 
