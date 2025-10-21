@@ -125,7 +125,7 @@
   }
 }
 
-/* Animações utilitárias para pontos piscantes nos gráficos */
+/* Util classes para pontos nos gráficos — desativadas por padrão */
 @keyframes blinkFade {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.25; }
@@ -137,5 +137,6 @@
   100% { transform: scale(1.9); opacity: 0; }
 }
 
-.blink-point { animation: blinkFade 1.2s ease-in-out infinite; }
-.blink-ring { animation: pulseRing 1.2s ease-out infinite; }
+/* Removemos a animação para evitar o "ponto piscante" */
+.blink-point { animation: none !important; }
+.blink-ring { animation: none !important; }
