@@ -57,7 +57,7 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
   }
 
   return (
-    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6">
+    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6 h-full">
       <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
         <h4 className="text-lg font-semibold text-white">Top operações</h4>
         <p className="text-base text-[#8c89b4]">
