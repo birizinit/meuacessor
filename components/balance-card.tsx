@@ -77,20 +77,8 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
               strokeWidth={2}
               fill="url(#colorGain)"
               animationDuration={1000}
-              dot={(props: any) => {
-                const { cx, cy, index } = props
-                if (index === 0) return null
-                const prev = chartData[index - 1]?.gain
-                const curr = chartData[index]?.gain
-                const isUp = prev !== undefined && curr >= prev
-                const color = isUp ? "#16c784" : "#f2474a"
-                return (
-                  <g>
-                    <circle cx={cx} cy={cy} r={7} fill={color} className="blink-ring" opacity={0.35} />
-                    <circle cx={cx} cy={cy} r={3} fill={color} className="blink-point" />
-                  </g>
-                )
-              }}
+              dot={false}
+              activeDot={false as unknown as any}
             />
           </AreaChart>
         </ResponsiveContainer>
