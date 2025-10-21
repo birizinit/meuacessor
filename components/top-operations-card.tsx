@@ -12,7 +12,8 @@ const operations = [
     rank: 1,
     rankImage: "/assets/rank1.png",
     pair: "BTC/ETH",
-    icons: ["/assets/fundobtc.svg", "/assets/btcb.svg", "/assets/ETC.svg"],
+    // Usa um único ícone completo do BTC + o ícone do par para evitar duplicações
+    icons: ["/assets/btclogo.svg", "/assets/ETC.svg"],
     entries: 50,
     investment: 10000,
     profit: 20000,
@@ -91,33 +92,17 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
             </span>
             <div className="flex items-center gap-2.5 pl-2.5">
               <div className="relative w-16 h-9">
-                {op.icons.length > 1 ? (
-                  <>
-                    <Image
-                      src={op.icons[0] || "/placeholder.svg"}
-                      alt=""
-                      width={37}
-                      height={37}
-                      className="absolute left-0"
-                    />
-                    <Image
-                      src={op.icons[1] || "/placeholder.svg"}
-                      alt=""
-                      width={37}
-                      height={37}
-                      className="absolute left-2"
-                    />
-                    <Image
-                      src={op.icons[2] || "/placeholder.svg"}
-                      alt=""
-                      width={37}
-                      height={37}
-                      className="absolute left-7"
-                    />
-                  </>
-                ) : (
-                  <Image src={op.icons[0] || "/placeholder.svg"} alt="" width={64} height={37} />
-                )}
+                {op.icons.map((icon, idx) => (
+                  <Image
+                    key={`${op.pair}-icon-${idx}`}
+                    src={icon || "/placeholder.svg"}
+                    alt=""
+                    width={37}
+                    height={37}
+                    className="absolute"
+                    style={{ left: `${idx * 8}px` }}
+                  />
+                ))}
               </div>
               <span>{op.pair}</span>
             </div>
