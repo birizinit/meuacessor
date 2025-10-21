@@ -29,8 +29,8 @@ export function ProjectionCard() {
   const COLORS = ["#22c55e", "#27264e"]
 
   return (
-    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6">
-      <div className="flex justify-between items-center mb-10 flex-wrap gap-2">
+    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6 flex flex-col">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
         <h4 className="text-lg font-semibold text-white">Projeção salva</h4>
         <div className="flex items-center border border-[rgba(174,171,216,0.53)] rounded-[50px] p-1">
           <Button
@@ -53,7 +53,7 @@ export function ProjectionCard() {
           </Button>
         </div>
       </div>
-      <div className="relative mx-auto w-[292px] h-[285px] my-10">
+      <div className="relative mx-auto w-[260px] h-[220px] my-6">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -62,8 +62,8 @@ export function ProjectionCard() {
               cy="50%"
               startAngle={180}
               endAngle={0}
-              innerRadius={80}
-              outerRadius={120}
+              innerRadius={70}
+              outerRadius={105}
               paddingAngle={0}
               dataKey="value"
             >
@@ -74,8 +74,8 @@ export function ProjectionCard() {
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/4 text-center">
-          <p className="text-2xl font-bold text-white">{percentage}%</p>
-          <p className="text-sm text-green-500">R${projectedValue.toFixed(2)}</p>
+          <p className="text-xl font-bold text-white">{percentage}%</p>
+          <p className="text-xs text-green-500">R${projectedValue.toFixed(2)}</p>
         </div>
         <div className="absolute bottom-0 w-full flex justify-between items-end text-sm">
           <span className="text-[#f2474a] flex items-center gap-1">
@@ -91,7 +91,7 @@ export function ProjectionCard() {
       </div>
       <Button
         variant="outline"
-        className="w-full bg-transparent border border-[rgba(174,171,216,0.53)] text-[#aeabd8] rounded-[10px] py-4 text-base mt-5 hover:bg-[#27264e]/50"
+        className="w-full bg-transparent border border-[rgba(174,171,216,0.53)] text-[#aeabd8] rounded-[10px] py-3 text-base mt-auto hover:bg-[#27264e]/50"
       >
         Visualizar operações
       </Button>
