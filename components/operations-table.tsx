@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -11,6 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type Operation = {
   id: string
@@ -101,12 +111,34 @@ function toCsv(operations: Operation[]): string {
 export function OperationsTable() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [operations] = useState<Operation[]>(INITIAL_OPERATIONS)
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [currentPage, setCurrentPage] = useState<number>(1)
 
   const filteredOperations = useMemo(() => {
     if (filter === "positive") return operations.filter((o) => o.resultBRL > 0)
     if (filter === "negative") return operations.filter((o) => o.resultBRL < 0)
     return operations
   }, [filter, operations])
+
+  const totalItems = filteredOperations.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+
+  useEffect(() => {
+    // Garante que a página atual sempre esteja dentro do range válido
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
+
+  const paginatedOperations = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredOperations.slice(start, start + pageSize)
+  }, [filteredOperations, currentPage, pageSize])
+
+  function getPageItems(current: number, total: number): (number | "...")[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+    if (current <= 4) return [1, 2, 3, 4, 5, "...", total]
+    if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total]
+    return [1, "...", current - 1, current, current + 1, "...", total]
+  }
 
   const handleExport = () => {
     const csv = toCsv(filteredOperations)
@@ -170,7 +202,7 @@ export function OperationsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOperations.map((op) => {
+            {paginatedOperations.map((op) => {
               const isPositive = op.resultBRL >= 0
               return (
                 <TableRow key={op.id} className="border-[#2a2959]">
@@ -201,6 +233,72 @@ export function OperationsTable() {
             })}
           </TableBody>
         </Table>
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-4 mt-4">
+          <div className="flex items-center gap-2 text-[#aeabd8]">
+            <span className="text-sm">Itens por página</span>
+            <Select
+              defaultValue={String(pageSize)}
+              onValueChange={(v) => {
+                const newSize = parseInt(v, 10)
+                setPageSize(newSize)
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger size="sm" className="min-w-[88px] bg-[#27264e] text-white border border-[rgba(174,171,216,0.35)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1d1d41] text-white border border-[rgba(174,171,216,0.35)]">
+                {[10, 20, 50].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Pagination className="justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setCurrentPage((p) => Math.max(1, p - 1))
+                  }}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  href="#"
+                />
+              </PaginationItem>
+              {getPageItems(currentPage, totalPages).map((p, idx) => (
+                <PaginationItem key={`${p}-${idx}`}>
+                  {p === "..." ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      isActive={p === currentPage}
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCurrentPage(Number(p))
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  href="#"
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </div>
     </section>
   )
