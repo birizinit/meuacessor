@@ -42,7 +42,9 @@ export function ResultCard({ dateRange }: ResultCardProps) {
           {dateRange.start.split("/")[0]} de ago. - {dateRange.end.split("/")[0]} de ago
         </p>
       </div>
-      <div className="flex items-center gap-4 mb-5">
+
+      {/* Valor principal */}
+      <div className="flex items-center gap-4 mb-2">
         <div className="w-[45px] h-[45px] bg-[#16c784] rounded-[10px] flex items-center justify-center">
           <Image src="/assets/seta diagonal direita.svg" alt="Up" width={13} height={13} />
         </div>
@@ -51,6 +53,16 @@ export function ResultCard({ dateRange }: ResultCardProps) {
           +{result.percentage}%
         </span>
       </div>
+
+      {/* Linha do Consórcio 8% */}
+      <div className="flex items-center gap-2 text-xs text-[#8c89b4] mb-5">
+        <p>Consórcio 8%</p>
+        <span className="bg-[rgba(140,137,180,0.15)] text-[#8c89b4] px-2 py-1 rounded-[10px]">
+          {formatCurrency(result.value * 0.08)}
+        </span>
+      </div>
+
+      {/* Gráfico */}
       <div className="relative w-full h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
