@@ -7,10 +7,14 @@ import { Header } from "@/components/header"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PerfilPage() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const { toast } = useToast()
 
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated")
@@ -19,6 +23,9 @@ export default function PerfilPage() {
     } else {
       setIsAuthenticated(true)
     }
+    // Load saved API token
+    const savedToken = localStorage.getItem("brokerApiToken") || ""
+    setApiToken(savedToken)
   }, [router])
 
   if (!isAuthenticated) {
@@ -139,6 +146,32 @@ export default function PerfilPage() {
                       <SelectItem value="en-us">English - US</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                {/* API Token da corretora */}
+                <div className="md:col-span-2">
+                  <label className="text-[#aeabd8] text-sm">API Token da corretora</label>
+                  <div className="mt-1 flex gap-2">
+                    <Input
+                      placeholder="Cole seu token aqui"
+                      className="bg-[#141332] border-[#2a2959] text-white"
+                      value={apiToken}
+                      onChange={(e) => setApiToken(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      className="bg-[#27264e] text-white border border-[rgba(174,171,216,0.35)] hover:bg-[#2f2e5a]"
+                      onClick={() => {
+                        localStorage.setItem("brokerApiToken", apiToken.trim())
+                        toast({
+                          title: "Token salvo",
+                          description: "Seu API Token foi salvo com sucesso.",
+                        })
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                  <p className="text-xs text-[#8c89b4] mt-1">Usado para buscar suas operações em tempo real.</p>
                 </div>
               </div>
             </div>
