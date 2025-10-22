@@ -32,67 +32,130 @@ export type Operation = {
   icon?: string
 }
 
-const INITIAL_OPERATIONS: Operation[] = [
-  {
-    id: "1",
-    pair: "BTC/ETH",
-    date: "15/08/2025",
-    time: "11:48:00",
-    contributionBRL: 10000,
-    resultBRL: 20000,
-    icon: "/assets/BTCECA.svg", // fallback icon
-  },
-  {
-    id: "2",
-    pair: "BNB/BTC",
-    date: "13/08/2025",
-    time: "13:40:00",
-    contributionBRL: 5000,
-    resultBRL: 10000,
-    icon: "/assets/BNBBTC.svg",
-  },
-  {
-    id: "3",
-    pair: "BTC/ECA",
-    date: "08/08/2025",
-    time: "12:28:08",
-    contributionBRL: 2000,
-    resultBRL: -5000,
-    icon: "/assets/BTCECA.svg",
-  },
-  {
-    id: "4",
-    pair: "BTC/ECA",
-    date: "05/08/2025",
-    time: "01:25:05",
-    contributionBRL: 2000,
-    resultBRL: 5000,
-    icon: "/assets/BTCECA.svg",
-  },
-  {
-    id: "5",
-    pair: "Bitcoin",
-    date: "03/08/2025",
-    time: "12:28:08",
-    contributionBRL: 2000,
-    resultBRL: -3000,
-    icon: "/assets/btcb.svg",
-  },
-  {
-    id: "6",
-    pair: "Ethereum",
-    date: "01/08/2025",
-    time: "01:25:05",
-    contributionBRL: 2000,
-    resultBRL: 5000,
-    icon: "/assets/ETC.svg",
-  },
-]
+// Helper types to map broker API trades into our Operation model
+type BrokerTrade = {
+  id?: string | number
+  pair?: string
+  symbol?: string
+  base?: string
+  quote?: string
+  executedAt?: string | number | Date
+  timestamp?: string | number | Date
+  date?: string
+  time?: string
+  investmentBRL?: number
+  amountBRL?: number
+  amount?: number
+  aport?: number
+  resultBRL?: number
+  profitBRL?: number
+  pnlBRL?: number
+  pnl?: number
+  profit?: number
+  entryValueBRL?: number
+  exitValueBRL?: number
+  [key: string]: unknown
+}
 
 type FilterType = "all" | "positive" | "negative"
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+function pad2(n: number): string {
+  return n.toString().padStart(2, "0")
+}
+
+function formatDateTimeFromAny(input: string | number | Date | undefined): { date: string; time: string } {
+  if (!input) return { date: "--/--/----", time: "--:--:--" }
+  const d = new Date(input)
+  if (Number.isNaN(d.getTime())) return { date: "--/--/----", time: "--:--:--" }
+  const day = pad2(d.getDate())
+  const month = pad2(d.getMonth() + 1)
+  const year = d.getFullYear()
+  const hours = pad2(d.getHours())
+  const minutes = pad2(d.getMinutes())
+  const seconds = pad2(d.getSeconds())
+  return { date: `${day}/${month}/${year}`, time: `${hours}:${minutes}:${seconds}` }
+}
+
+function normalizePair(trade: BrokerTrade): string {
+  if (typeof trade.pair === "string" && trade.pair.trim()) return trade.pair
+  if (typeof trade.symbol === "string" && trade.symbol.trim()) {
+    const s = trade.symbol.replace(/[^A-Za-z]/g, "").toUpperCase()
+    // Try to split a merged symbol like BTCUSDT into BTC/USDT heuristically
+    const known = ["BTC", "ETH", "BNB", "USDT", "USDC", "ADA", "SOL", "DOT", "XRP", "ECA", "ETC"]
+    for (const base of known) {
+      if (s.startsWith(base)) {
+        const quote = s.slice(base.length)
+        if (quote) return `${base}/${quote}`
+      }
+    }
+    return s
+  }
+  if (trade.base && trade.quote) return `${String(trade.base).toUpperCase()}/${String(trade.quote).toUpperCase()}`
+  return "-"
+}
+
+function getIconForPair(pair: string): string | undefined {
+  const p = pair.toUpperCase()
+  // Combined icons first
+  if (p.includes("BNB") && p.includes("BTC")) return "/assets/BNBBTC.svg"
+  if (p.includes("BTC") && p.includes("ECA")) return "/assets/BTCECA.svg"
+  // Single asset icons as fallback
+  if (p.includes("BTC")) return "/assets/btclogo.svg"
+  if (p.includes("ETH")) return "/assets/ETC.svg" // closest available
+  return undefined
+}
+
+function toNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string") {
+    const n = Number(value)
+    if (Number.isFinite(n)) return n
+  }
+  return undefined
+}
+
+function mapTradeToOperation(trade: BrokerTrade): Operation {
+  const pair = normalizePair(trade)
+  const id = String(trade.id ?? `${pair}-${String(trade.timestamp ?? trade.executedAt ?? trade.date ?? Math.random()).slice(0, 16)}`)
+
+  const { date, time } = formatDateTimeFromAny(trade.executedAt ?? trade.timestamp ?? trade.date)
+
+  const contribution =
+    toNumber(trade.investmentBRL) ??
+    toNumber(trade.amountBRL) ??
+    toNumber(trade.aport) ??
+    toNumber(trade.amount) ??
+    toNumber(trade.entryValueBRL) ??
+    0
+
+  const explicitResult =
+    toNumber(trade.resultBRL) ??
+    toNumber(trade.profitBRL) ??
+    toNumber(trade.pnlBRL) ??
+    toNumber(trade.pnl) ??
+    toNumber(trade.profit)
+
+  let result = explicitResult
+  if (result === undefined) {
+    const exitV = toNumber(trade.exitValueBRL)
+    const entryV = toNumber(trade.entryValueBRL)
+    if (exitV !== undefined && entryV !== undefined) result = exitV - entryV
+  }
+  if (result === undefined) result = 0
+
+  return {
+    id,
+    pair,
+    date,
+    time,
+    contributionBRL: contribution,
+    resultBRL: result,
+    icon: getIconForPair(pair),
+  }
 }
 
 function toCsv(operations: Operation[]): string {
@@ -110,9 +173,12 @@ function toCsv(operations: Operation[]): string {
 
 export function OperationsTable() {
   const [filter, setFilter] = useState<FilterType>("all")
-  const [operations] = useState<Operation[]>(INITIAL_OPERATIONS)
+  const [operations, setOperations] = useState<Operation[]>([])
   const [pageSize, setPageSize] = useState<number>(10)
   const [currentPage, setCurrentPage] = useState<number>(1)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [errorMessage, setErrorMessage] = useState<string>("")
+  const [serverTotalPages, setServerTotalPages] = useState<number | null>(null)
 
   const filteredOperations = useMemo(() => {
     if (filter === "positive") return operations.filter((o) => o.resultBRL > 0)
@@ -120,18 +186,67 @@ export function OperationsTable() {
     return operations
   }, [filter, operations])
 
-  const totalItems = filteredOperations.length
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  // When using server-side pagination, use server-provided totalPages when present.
+  // Otherwise, infer minimally: if we received a full page, allow navigating to next.
+  const inferredTotalPages = serverTotalPages ?? (operations.length === pageSize ? currentPage + 1 : currentPage)
+  const totalPages = Math.max(1, inferredTotalPages)
 
   useEffect(() => {
-    // Garante que a página atual sempre esteja dentro do range válido
     setCurrentPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
-  const paginatedOperations = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredOperations.slice(start, start + pageSize)
-  }, [filteredOperations, currentPage, pageSize])
+  const paginatedOperations = filteredOperations
+
+  // Fetch broker trades whenever token/page/pageSize changes
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("brokerApiToken") : null
+    if (!token) {
+      setErrorMessage("Token da corretora não configurado. Salve-o em Perfil.")
+      setOperations([])
+      setServerTotalPages(1)
+      return
+    }
+    const controller = new AbortController()
+    const load = async () => {
+      try {
+        setIsLoading(true)
+        setErrorMessage("")
+        const timestamp = Date.now().toString()
+        const url = `https://broker-api.mybroker.dev/token/trades?page=${currentPage}&pageSize=${pageSize}`
+        const res = await fetch(url, {
+          headers: {
+            "api-token": token,
+            "x-timestamp": timestamp,
+          },
+          signal: controller.signal,
+        })
+        if (!res.ok) {
+          const text = await res.text().catch(() => "")
+          throw new Error(text || `Erro ${res.status}`)
+        }
+        const json: unknown = await res.json()
+        const root: any = json as any
+        const list: BrokerTrade[] = Array.isArray(root)
+          ? (root as BrokerTrade[])
+          : (root?.data ?? root?.items ?? root?.trades ?? [])
+        const mapped = list.map(mapTradeToOperation)
+        setOperations(mapped)
+
+        const totalPagesFromApi: number | undefined =
+          root?.totalPages ?? root?.meta?.totalPages ?? (root?.total ?? root?.totalCount ? Math.ceil((root?.total ?? root?.totalCount) / pageSize) : undefined)
+        setServerTotalPages(totalPagesFromApi ?? null)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Falha ao carregar operações"
+        setErrorMessage(msg)
+        setOperations([])
+        setServerTotalPages(1)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    load()
+    return () => controller.abort()
+  }, [currentPage, pageSize])
 
   function getPageItems(current: number, total: number): (number | "...")[] {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
@@ -202,7 +317,22 @@ export function OperationsTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedOperations.map((op) => {
+            {isLoading && (
+              <TableRow className="border-[#2a2959]">
+                <TableCell colSpan={5} className="text-center text-white">Carregando operações...</TableCell>
+              </TableRow>
+            )}
+            {!isLoading && errorMessage && (
+              <TableRow className="border-[#2a2959]">
+                <TableCell colSpan={5} className="text-center text-rose-300">{errorMessage}</TableCell>
+              </TableRow>
+            )}
+            {!isLoading && !errorMessage && paginatedOperations.length === 0 && (
+              <TableRow className="border-[#2a2959]">
+                <TableCell colSpan={5} className="text-center text-white">Nenhuma operação encontrada</TableCell>
+              </TableRow>
+            )}
+            {!isLoading && !errorMessage && paginatedOperations.map((op) => {
               const isPositive = op.resultBRL >= 0
               return (
                 <TableRow key={op.id} className="border-[#2a2959]">
