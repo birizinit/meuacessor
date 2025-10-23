@@ -8,12 +8,16 @@ import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 export default function PerfilPage() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [profileImage, setProfileImage] = useState("/assets/Ellipse.svg")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [apiToken, setApiToken] = useState("")
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated")
@@ -39,6 +43,13 @@ export default function PerfilPage() {
         localStorage.setItem("profileImage", imageUrl)
       }
       reader.readAsDataURL(file)
+    }
+  }
+
+  const handleConnect = () => {
+    if (apiToken.trim()) {
+      localStorage.setItem("apiToken", apiToken)
+      setShowSuccessModal(true)
     }
   }
 
@@ -204,11 +215,66 @@ export default function PerfilPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="md:col-span-2">
+                  <label className="text-[#aeabd8] text-sm block mb-2">API Token</label>
+                  <Input
+                    placeholder="Digite seu token da API"
+                    value={apiToken}
+                    onChange={(e) => setApiToken(e.target.value)}
+                    className="bg-[#141332] border-[#2a2959] text-white h-11"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={handleConnect}
+                    className="w-full h-11 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium"
+                  >
+                    Conectar
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="bg-[#1d1d41] border border-[rgba(174,171,216,0.25)] max-w-sm p-8">
+          <DialogTitle className="sr-only">Conta vinculada com sucesso</DialogTitle>
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-20 h-20 rounded-full border-2 border-white/20 flex items-center justify-center">
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-white"
+              >
+                <path
+                  d="M20 6L9 17L4 12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h3 className="text-white text-xl font-semibold">Conta vinculada!</h3>
+            <p className="text-[#aeabd8] text-sm">
+              Sua conta foi vinculada com sucesso. Agora você pode utilizar a API para sincronizar suas operações.
+            </p>
+            <div className="flex gap-3 w-full pt-2">
+              <Button
+                onClick={() => setShowSuccessModal(false)}
+                className="flex-1 h-11 bg-transparent border border-[#2a2959] hover:bg-[#2a2959] text-white"
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
