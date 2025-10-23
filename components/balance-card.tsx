@@ -1,6 +1,6 @@
 "use client"
 import { Card } from "@/components/ui/card"
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { useState, useEffect } from "react"
 
 interface BalanceCardProps {
@@ -13,11 +13,54 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
   useEffect(() => {
     const data = Array.from({ length: 12 }, (_, i) => ({
       day: i + 1,
-      gain: Math.floor(Math.random() * 30000) + 20000,
-      loss: Math.floor(Math.random() * 15000) + 5000,
+      gain: Math.floor(Math.random() * 40000) + 15000,
+      loss: Math.floor(Math.random() * 20000) + 5000,
     }))
     setChartData(data)
   }, [dateRange])
+
+  const CustomDot = (props: any) => {
+    const { cx, cy, index, payload } = props
+
+    if (index === 0) return null
+
+    const currentValue = payload.gain
+    const previousValue = chartData[index - 1]?.gain
+
+    const isGain = currentValue > previousValue
+    const color = isGain ? "#16c784" : "#f2474a"
+
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={color}
+        style={{
+          filter: `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}) drop-shadow(0 0 12px ${color})`,
+        }}
+      />
+    )
+  }
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      const value = data.gain
+      const formattedValue = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(value)
+
+      return (
+        <div className="bg-[#2a2a5a] border border-[#3a3a6a] rounded-lg p-3 shadow-lg">
+          <p className="text-white text-sm font-semibold">{`${data.day} de Agosto`}</p>
+          <p className="text-[#16c784] text-sm font-bold">{formattedValue}</p>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6">
@@ -42,7 +85,7 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
             <defs>
               <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#16c784" stopOpacity={0.15} />
+                <stop offset="5%" stopColor="#16c784" stopOpacity={0.3} />
                 <stop offset="95%" stopColor="#16c784" stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -60,16 +103,7 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
               tickLine={false}
               tickFormatter={(value) => `${value / 1000}K`}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#27264e",
-                border: "none",
-                borderRadius: "8px",
-                color: "#fff",
-              }}
-              formatter={(value: number) => [`R$${value.toLocaleString("pt-BR")}`, ""]}
-              labelFormatter={(label) => `${label} de Agosto`}
-            />
+            <Tooltip content={<CustomTooltip />} cursor={false} />
             <Area
               type="monotone"
               dataKey="gain"
@@ -77,8 +111,8 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
               strokeWidth={2}
               fill="url(#colorGain)"
               animationDuration={1000}
-              dot={false}
-              activeDot={false as unknown as any}
+              dot={<CustomDot />}
+              activeDot={{ r: 6, fill: "#16c784", stroke: "#16c784", strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>

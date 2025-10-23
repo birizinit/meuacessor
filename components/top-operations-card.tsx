@@ -1,49 +1,40 @@
 "use client"
 
-import Image from "next/image"
 import { Card } from "@/components/ui/card"
+import Image from "next/image"
 
 interface TopOperationsCardProps {
   dateRange: { start: string; end: string }
 }
 
-const operations = [
+const traders = [
   {
     rank: 1,
-    rankImage: "/assets/rank1.png",
-    pair: "BTC/ETH",
-    // Usa um único ícone completo do BTC + o ícone do par para evitar duplicações
-    icons: ["/assets/btclogo.svg", "/assets/ETC.svg"],
-    entries: 50,
-    investment: 10000,
-    profit: 20000,
+    name: "Carlos Alberto",
+    investment: 122158.2,
+    profit: 879230.05,
+    avatar: "/assets/trader-avatar-1.jpg",
   },
   {
     rank: 2,
-    rankImage: "/assets/rank2.png",
-    pair: "BNB/BTC",
-    icons: ["/assets/BNBBTC.svg"],
-    entries: 40,
-    investment: 5000,
-    profit: 10000,
+    name: "Alan Victor",
+    investment: 898080.32,
+    profit: 565230.09,
+    avatar: "/assets/trader-avatar-2.jpg",
   },
   {
     rank: 3,
-    rankImage: "/assets/rank3.png",
-    pair: "BTC/ECA",
-    icons: ["/assets/BTCECA.svg"],
-    entries: 20,
-    investment: 2000,
-    profit: 5000,
+    name: "Rosana Lima",
+    investment: 989250.08,
+    profit: 889230.25,
+    avatar: "/assets/trader-avatar-3.jpg",
   },
   {
     rank: 4,
-    rankImage: null,
-    pair: "BTC/ECA",
-    icons: ["/assets/BTCECA.svg"],
-    entries: 20,
-    investment: 2000,
-    profit: 5000,
+    name: "Maria Souza",
+    investment: 985240.07,
+    profit: 848300.18,
+    avatar: "/assets/trader-avatar-4.jpg",
   },
 ]
 
@@ -52,65 +43,71 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
+  const getRankImage = (rank: number) => {
+    if (rank <= 3) {
+      return `/assets/rank${rank}.png`
+    }
+    return null
+  }
+
   return (
-    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6 h-full">
+    <Card className="bg-[#1d1d41] border-none rounded-[20px] p-6">
       <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
-        <h4 className="text-lg font-semibold text-white">Top operações</h4>
+        <h4 className="text-lg font-semibold text-white">Top Traders</h4>
         <p className="text-base text-[#8c89b4]">
           {dateRange.start.split("/")[0]} de ago. - {dateRange.end.split("/")[0]} de ago
         </p>
       </div>
       <div className="flex flex-col gap-px bg-[rgba(174,171,216,0.1)] py-px">
-        <div className="grid grid-cols-[0.5fr_1.5fr_1fr_1fr_1fr] items-center px-2.5 py-2.5 bg-[#1d1d41] text-[#aeabd8] text-xs">
+        <div className="grid grid-cols-[0.5fr_2fr_1.5fr_1.5fr] items-center px-2.5 py-2.5 bg-[#1d1d41] text-[#aeabd8] text-xs">
           <span>Rank</span>
-          <span>Moedas</span>
-          <span>Entradas</span>
-          <span>Aportes</span>
+          <span>Nome</span>
+          <span>Aporte</span>
           <span>Lucro</span>
         </div>
-        {operations.map((op) => (
+        {traders.map((trader) => (
           <div
-            key={op.rank}
-            className="grid grid-cols-[0.5fr_1.5fr_1fr_1fr_1fr] items-center px-2.5 py-4 bg-[#1d1d41] text-sm text-white"
+            key={trader.rank}
+            className="grid grid-cols-[0.5fr_2fr_1.5fr_1.5fr] items-center px-2.5 py-4 bg-[#1d1d41] text-sm text-white"
           >
-            <span className="text-center font-bold text-[15px]">
-              {op.rankImage ? (
+            <span className="flex justify-center">
+              {getRankImage(trader.rank) ? (
                 <Image
-                  src={op.rankImage || "/placeholder.svg"}
-                  alt={`Rank ${op.rank}`}
+                  src={getRankImage(trader.rank)! || "/placeholder.svg"}
+                  alt={`Rank ${trader.rank}`}
                   width={34}
                   height={34}
-                  className="mx-auto"
                 />
               ) : (
-                op.rank
+                <span className="font-bold text-[15px]">{trader.rank}</span>
               )}
             </span>
             <div className="flex items-center gap-2.5 pl-2.5">
-              <div className="relative w-16 h-9">
-                {op.icons.map((icon, idx) => (
-                  <Image
-                    key={`${op.pair}-icon-${idx}`}
-                    src={icon || "/placeholder.svg"}
-                    alt=""
-                    width={37}
-                    height={37}
-                    className="absolute"
-                    style={{ left: `${idx * 8}px` }}
-                  />
-                ))}
-              </div>
-              <span>{op.pair}</span>
+              <img
+                src={trader.avatar || "/placeholder.svg"}
+                alt={trader.name}
+                width={40}
+                height={40}
+                className="rounded-full object-cover"
+              />
+              <span>{trader.name}</span>
             </div>
-            <span className="pl-2.5">{op.entries}</span>
-            <span className="pl-2.5">{formatCurrency(op.investment)}</span>
+            <span className="pl-2.5">{formatCurrency(trader.investment)}</span>
             <span className="text-[#16c784] flex items-center gap-1 pl-2.5">
-              {formatCurrency(op.profit)}
-              <Image src="/assets/arrow-up.svg" alt="Up" width={12} height={12} />
+              {formatCurrency(trader.profit)}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M6 2L6 10M6 2L2 6M6 2L10 6"
+                  stroke="#16c784"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </span>
           </div>
         ))}

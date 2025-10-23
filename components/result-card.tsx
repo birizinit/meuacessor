@@ -10,15 +10,12 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ dateRange }: ResultCardProps) {
-  const [result, setResult] = useState({ value: 632000, percentage: 1.29 })
+  const [result, setResult] = useState({ value: 1788342.9, percentage: 1.29 })
   const [chartData, setChartData] = useState<{ value: number }[]>([])
 
   // Simulate data fetching based on date range
   useEffect(() => {
-    // In a real app, this would fetch from an API
-    const randomValue = Math.floor(Math.random() * 200000) + 500000
-    const randomPercentage = (Math.random() * 3).toFixed(2)
-    setResult({ value: randomValue, percentage: Number.parseFloat(randomPercentage) })
+    setResult({ value: 1788342.9, percentage: 1.29 })
 
     const data = Array.from({ length: 30 }, (_, i) => ({
       value: Math.floor(Math.random() * 40000) + 80000 + i * 1000,

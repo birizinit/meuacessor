@@ -1,32 +1,30 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 
 export function ProjectionCard() {
+  const router = useRouter()
   const [period, setPeriod] = useState<"day" | "month">("day")
-  const [percentage, setPercentage] = useState(75)
-  const [projectedValue, setProjectedValue] = useState(197.75)
+  const [percentage, setPercentage] = useState(72.5)
+  const [projectedValue, setProjectedValue] = useState(189.225)
 
   useEffect(() => {
     if (period === "day") {
-      setPercentage(75)
-      setProjectedValue(197.75)
+      setPercentage(72.5)
+      setProjectedValue(189.225)
     } else {
       setPercentage(82)
       setProjectedValue(5932.5)
     }
   }, [period])
 
-  const data = [
-    { name: "Completed", value: percentage },
-    { name: "Remaining", value: 100 - percentage },
-  ]
-
-  const COLORS = ["#22c55e", "#27264e"]
+  const radius = 80
+  const circumference = Math.PI * radius
+  const strokeDashoffset = circumference - (percentage / 100) * circumference
 
   return (
     <Card className="bg-[#1d1d41] border-none rounded-[20px] p-5 flex flex-col">
@@ -53,45 +51,57 @@ export function ProjectionCard() {
           </Button>
         </div>
       </div>
-      <div className="relative mx-auto w-[240px] h-[190px] my-3">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              startAngle={180}
-              endAngle={0}
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={0}
-              dataKey="value"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index]} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/4 text-center">
-          <p className="text-xl font-bold text-white">{percentage}%</p>
-          <p className="text-xs text-green-500">R${projectedValue.toFixed(2)}</p>
-        </div>
-        <div className="absolute bottom-0 w-full flex justify-between items-end text-sm">
-          <span className="text-[#f2474a] flex items-center gap-1">
-            R$0
-            <Image src="/assets/ARROWDOWN.svg" alt="Down" width={12} height={12} />
-          </span>
-          <span className="text-white">Conservador</span>
-          <span className="text-green-500 flex items-center gap-1">
-            R$261
-            <Image src="/assets/arrow-up.svg" alt="Up" width={12} height={12} />
-          </span>
+
+      <div className="relative mx-auto w-[240px] h-[180px] my-3 flex flex-col items-center justify-center">
+        <svg width="240" height="140" viewBox="0 0 240 140" className="absolute top-0">
+          {/* Background arc */}
+          <path
+            d="M 30 120 A 80 80 0 0 1 210 120"
+            fill="none"
+            stroke="#27264e"
+            strokeWidth="32"
+            strokeLinecap="square"
+          />
+          {/* Progress arc */}
+          <path
+            d="M 30 120 A 80 80 0 0 1 210 120"
+            fill="none"
+            stroke="#00ff88"
+            strokeWidth="32"
+            strokeLinecap="square"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{
+              transition: "stroke-dashoffset 0.3s ease",
+              filter: "drop-shadow(0 0 8px rgba(0, 255, 136, 0.6))",
+            }}
+          />
+        </svg>
+
+        {/* Text overlay */}
+        <div className="text-center mt-8">
+          <p className="text-3xl font-bold text-white">{percentage}%</p>
+          <p className="text-sm text-[#00ff88]">R${projectedValue.toFixed(3)}</p>
         </div>
       </div>
+
+      {/* Bottom labels */}
+      <div className="flex justify-between items-end text-sm mt-8">
+        <span className="text-[#f2474a] flex items-center gap-1">
+          R$0
+          <Image src="/assets/ARROWDOWN.svg" alt="Down" width={12} height={12} />
+        </span>
+        <span className="text-white">Conservador</span>
+        <span className="text-[#00ff88] flex items-center gap-1">
+          R$261
+          <Image src="/assets/arrow-up.svg" alt="Up" width={12} height={12} />
+        </span>
+      </div>
+
       <Button
+        onClick={() => router.push("/operacoes")}
         variant="outline"
-        className="w-full bg-transparent border border-[rgba(174,171,216,0.53)] text-[#aeabd8] rounded-[10px] py-2 text-sm hover:bg-[#27264e]/50"
+        className="w-full bg-transparent border border-[rgba(174,171,216,0.53)] text-[#aeabd8] rounded-[10px] py-2 text-sm hover:bg-[#27264e]/50 mt-4"
       >
         Visualizar operações
       </Button>
