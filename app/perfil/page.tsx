@@ -22,6 +22,8 @@ export default function PerfilPage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoadingUser, setIsLoadingUser] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
+  const [moderateProgress, setModerateProgress] = useState(44)
+  const [aggressiveProgress, setAggressiveProgress] = useState(0)
 
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated")
@@ -50,13 +52,27 @@ export default function PerfilPage() {
       const api = new MyBrokerAPI(token)
       const data = await api.getUserInfo()
       setUserData(data)
-      console.log("[v0] User data fetched:", data)
+
+      calculateProgress(data)
     } catch (error) {
       console.error("[v0] Error fetching user data:", error)
       setApiError(error instanceof Error ? error.message : "Failed to fetch user data")
     } finally {
       setIsLoadingUser(false)
     }
+  }
+
+  const calculateProgress = (data: UserData) => {
+    // This is a placeholder calculation - adjust based on your actual business logic
+    // For example, you might calculate based on number of trades, total investment, etc.
+
+    // Example: Calculate based on some user metrics
+    // For now, using placeholder values
+    const moderate = Math.min(Math.round(Math.random() * 100), 100)
+    const aggressive = Math.min(Math.round(Math.random() * 100), 100)
+
+    setModerateProgress(moderate)
+    setAggressiveProgress(aggressive)
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,11 +169,11 @@ export default function PerfilPage() {
                 <div className="text-[#aeabd8] text-xs mb-4">Continue operando pelo menos 3% da sua banca</div>
                 <div className="relative w-full h-2 bg-[#27264e] rounded-full overflow-hidden">
                   <div
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full"
-                    style={{ width: "44%" }}
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full transition-all duration-500"
+                    style={{ width: `${moderateProgress}%` }}
                   />
                 </div>
-                <p className="text-[#7c3aed] text-sm font-semibold mt-2">44%</p>
+                <p className="text-[#7c3aed] text-sm font-semibold mt-2">{moderateProgress}%</p>
               </div>
 
               {/* Progress Card 2 */}
@@ -166,11 +182,11 @@ export default function PerfilPage() {
                 <div className="text-[#aeabd8] text-xs mb-4">Continue operando pelo menos 5% da sua banca</div>
                 <div className="relative w-full h-2 bg-[#27264e] rounded-full overflow-hidden">
                   <div
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full"
-                    style={{ width: "6%" }}
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full transition-all duration-500"
+                    style={{ width: `${aggressiveProgress}%` }}
                   />
                 </div>
-                <p className="text-[#7c3aed] text-sm font-semibold mt-2">6%</p>
+                <p className="text-[#7c3aed] text-sm font-semibold mt-2">{aggressiveProgress}%</p>
               </div>
             </div>
 
@@ -187,7 +203,7 @@ export default function PerfilPage() {
                   <label className="text-[#aeabd8] text-sm block mb-2">E-mail</label>
                   <Input
                     placeholder="Digite"
-                    value={userData?.email || ""}
+                    defaultValue={userData?.email || ""}
                     readOnly={!!userData}
                     className="bg-[#141332] border-[#2a2959] text-white h-11"
                   />
@@ -204,7 +220,7 @@ export default function PerfilPage() {
                   <label className="text-[#aeabd8] text-sm block mb-2">Nome</label>
                   <Input
                     placeholder="Digite"
-                    value={userData?.name || ""}
+                    defaultValue={userData?.name || ""}
                     readOnly={!!userData}
                     className="bg-[#141332] border-[#2a2959] text-white h-11"
                   />
@@ -217,7 +233,7 @@ export default function PerfilPage() {
                   <label className="text-[#aeabd8] text-sm block mb-2">Apelido</label>
                   <Input
                     placeholder="Digite"
-                    value={userData?.nickname || ""}
+                    defaultValue={userData?.nickname || ""}
                     readOnly={!!userData}
                     className="bg-[#141332] border-[#2a2959] text-white h-11"
                   />
@@ -228,7 +244,7 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">País</label>
-                  <Select value={userData?.country || ""}>
+                  <Select defaultValue={userData?.country || ""}>
                     <SelectTrigger className="bg-[#141332] border-[#2a2959] text-white h-11">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
@@ -246,7 +262,7 @@ export default function PerfilPage() {
                   <label className="text-[#aeabd8] text-sm block mb-2">Telefone</label>
                   <Input
                     placeholder="(00) 0000-0000"
-                    value={userData?.phone ? `(${userData.phoneCountryCode}) ${userData.phone}` : ""}
+                    defaultValue={userData?.phone ? `(${userData.phoneCountryCode}) ${userData.phone}` : ""}
                     readOnly={!!userData}
                     className="bg-[#141332] border-[#2a2959] text-white h-11"
                   />
@@ -270,7 +286,7 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Idioma do sistema</label>
-                  <Select value={userData?.language || "pt-br"} disabled>
+                  <Select defaultValue={userData?.language || "pt-br"} disabled>
                     <SelectTrigger className="bg-[#141332] border-[#2a2959] text-white h-11">
                       <SelectValue />
                     </SelectTrigger>

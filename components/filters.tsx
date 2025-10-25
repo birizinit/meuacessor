@@ -6,8 +6,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { useState } from "react"
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useEffect } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface FiltersProps {
   selectedPeriod: "week" | "month" | "today"
@@ -33,9 +33,34 @@ const months = [
   "Dezembro",
 ]
 
-export function Filters({ selectedPeriod, onPeriodChange, currentMonth, onMonthChange, dateRange, onDateRangeChange }: FiltersProps) {
+export function Filters({
+  selectedPeriod,
+  onPeriodChange,
+  currentMonth,
+  onMonthChange,
+  dateRange,
+  onDateRangeChange,
+}: FiltersProps) {
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
+
+  useEffect(() => {
+    const monthIndex = months.indexOf(currentMonth)
+    const currentYear = new Date().getFullYear()
+
+    // Get first and last day of the selected month
+    const firstDay = new Date(currentYear, monthIndex, 1)
+    const lastDay = new Date(currentYear, monthIndex + 1, 0)
+
+    const newDateRange = {
+      start: format(firstDay, "dd/MM/yyyy"),
+      end: format(lastDay, "dd/MM/yyyy"),
+    }
+
+    onDateRangeChange(newDateRange)
+    setStartDate(firstDay)
+    setEndDate(lastDay)
+  }, [currentMonth, onDateRangeChange])
 
   const handlePreviousMonth = () => {
     const currentIndex = months.indexOf(currentMonth)
@@ -49,13 +74,13 @@ export function Filters({ selectedPeriod, onPeriodChange, currentMonth, onMonthC
     onMonthChange(months[newIndex])
   }
 
-  const handleDateSelect = (date: Date | undefined, type: 'start' | 'end') => {
-    if (type === 'start') {
+  const handleDateSelect = (date: Date | undefined, type: "start" | "end") => {
+    if (type === "start") {
       setStartDate(date)
       if (date && endDate) {
         onDateRangeChange({
           start: format(date, "dd/MM/yyyy"),
-          end: format(endDate, "dd/MM/yyyy")
+          end: format(endDate, "dd/MM/yyyy"),
         })
       }
     } else {
@@ -63,7 +88,7 @@ export function Filters({ selectedPeriod, onPeriodChange, currentMonth, onMonthC
       if (startDate && date) {
         onDateRangeChange({
           start: format(startDate, "dd/MM/yyyy"),
-          end: format(date, "dd/MM/yyyy")
+          end: format(date, "dd/MM/yyyy"),
         })
       }
     }
@@ -141,7 +166,7 @@ export function Filters({ selectedPeriod, onPeriodChange, currentMonth, onMonthC
                     <Calendar
                       mode="single"
                       selected={startDate}
-                      onSelect={(date) => handleDateSelect(date, 'start')}
+                      onSelect={(date) => handleDateSelect(date, "start")}
                       locale={ptBR}
                       className="rounded-md"
                     />
@@ -151,10 +176,10 @@ export function Filters({ selectedPeriod, onPeriodChange, currentMonth, onMonthC
                     <Calendar
                       mode="single"
                       selected={endDate}
-                      onSelect={(date) => handleDateSelect(date, 'end')}
+                      onSelect={(date) => handleDateSelect(date, "end")}
                       locale={ptBR}
                       className="rounded-md"
-                      disabled={(date) => startDate ? date < startDate : false}
+                      disabled={(date) => (startDate ? date < startDate : false)}
                     />
                   </div>
                 </div>

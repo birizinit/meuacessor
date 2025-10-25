@@ -1,16 +1,16 @@
 "use client"
-
-import Image from "next/image"
 import { Card } from "@/components/ui/card"
 import { useEffect, useState } from "react"
 import { AreaChart, Area, ResponsiveContainer } from "recharts"
 import { createApiClient } from "@/lib/api"
+import { getMonthAbbreviation } from "@/lib/date-utils"
 
 interface ResultCardProps {
   dateRange: { start: string; end: string }
+  currentMonth: string
 }
 
-export function ResultCard({ dateRange }: ResultCardProps) {
+export function ResultCard({ dateRange, currentMonth }: ResultCardProps) {
   const [result, setResult] = useState({ value: 0, percentage: 0 })
   const [chartData, setChartData] = useState<{ value: number }[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -24,32 +24,33 @@ export function ResultCard({ dateRange }: ResultCardProps) {
       try {
         const response = await apiClient.getTrades(1, 100)
 
-        const currentMonth = new Date().getMonth()
-        const currentYear = new Date().getFullYear()
+        const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
+        const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
+        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
 
-        const monthlyTrades = response.data.filter((trade) => {
+        const filteredTrades = response.data.filter((trade) => {
           const tradeDate = new Date(trade.openTime)
-          return tradeDate.getMonth() === currentMonth && tradeDate.getFullYear() === currentYear
+          return tradeDate >= startDate && tradeDate <= endDate
         })
 
-        const totalProfit = monthlyTrades.reduce((sum, trade) => sum + trade.pnl, 0)
-        const totalInvestment = monthlyTrades.reduce((sum, trade) => sum + trade.amount, 0)
+        const totalProfit = filteredTrades.reduce((sum, trade) => sum + trade.pnl, 0)
+        const totalInvestment = filteredTrades.reduce((sum, trade) => sum + trade.amount, 0)
         const percentage = totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0
 
         setResult({ value: totalProfit, percentage })
 
         const dailyProfits = new Map<number, number>()
-        monthlyTrades.forEach((trade) => {
+        filteredTrades.forEach((trade) => {
           const day = new Date(trade.openTime).getDate()
           dailyProfits.set(day, (dailyProfits.get(day) || 0) + trade.pnl)
         })
 
-        const data = Array.from({ length: 30 }, (_, i) => ({
+        const daysInPeriod = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        const data = Array.from({ length: daysInPeriod }, (_, i) => ({
           value: dailyProfits.get(i + 1) || 0,
         }))
         setChartData(data)
-
-        console.log("[v0] Monthly profit calculated:", totalProfit)
       } catch (error) {
         console.error("[v0] Error fetching monthly profit:", error)
       } finally {
@@ -73,7 +74,8 @@ export function ResultCard({ dateRange }: ResultCardProps) {
       <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
         <h4 className="text-lg font-semibold text-white">Lucro do Mês</h4>
         <p className="text-base text-[#8c89b4]">
-          {dateRange.start.split("/")[0]} de ago. - {dateRange.end.split("/")[0]} de ago
+          {dateRange.start.split("/")[0]} de {getMonthAbbreviation(currentMonth)}. - {dateRange.end.split("/")[0]} de{" "}
+          {getMonthAbbreviation(currentMonth)}
         </p>
       </div>
 
@@ -85,12 +87,27 @@ export function ResultCard({ dateRange }: ResultCardProps) {
             <div
               className={`w-[45px] h-[45px] rounded-[10px] flex items-center justify-center ${result.value >= 0 ? "bg-[#16c784]" : "bg-[#f2474a]"}`}
             >
-              <Image
-                src={result.value >= 0 ? "/assets/seta diagonal direita.svg" : "/assets/ARROWDOWN.svg"}
-                alt={result.value >= 0 ? "Up" : "Down"}
-                width={13}
-                height={13}
-              />
+              {result.value >= 0 ? (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M6.5 10.5V2.5M6.5 2.5L2.5 6.5M6.5 2.5L10.5 6.5"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M6.5 2.5V10.5M6.5 10.5L10.5 6.5M6.5 10.5L2.5 6.5"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
             </div>
             <p className="text-[35px] font-semibold text-white">{formatCurrency(result.value)}</p>
             <span

@@ -4,9 +4,11 @@ import { Card } from "@/components/ui/card"
 import { useEffect, useState } from "react"
 import { createApiClient, formatCurrencyPair, type Trade } from "@/lib/api"
 import Image from "next/image"
+import { getMonthAbbreviation } from "@/lib/date-utils"
 
 interface TopOperationsCardProps {
   dateRange: { start: string; end: string }
+  currentMonth: string
 }
 
 interface TopOperation {
@@ -17,7 +19,7 @@ interface TopOperation {
   profit: number
 }
 
-export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
+export function TopOperationsCard({ dateRange, currentMonth }: TopOperationsCardProps) {
   const [operations, setOperations] = useState<TopOperation[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -30,9 +32,19 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
       try {
         const response = await apiClient.getTrades(1, 100)
 
+        const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
+        const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
+        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
+
+        const filteredTrades = response.data.filter((trade) => {
+          const tradeDate = new Date(trade.openTime)
+          return tradeDate >= startDate && tradeDate <= endDate
+        })
+
         const symbolStats = new Map<string, { entries: number; investment: number; profit: number }>()
 
-        response.data.forEach((trade: Trade) => {
+        filteredTrades.forEach((trade: Trade) => {
           const symbol = formatCurrencyPair(trade.symbol)
           const existing = symbolStats.get(symbol) || { entries: 0, investment: 0, profit: 0 }
 
@@ -54,7 +66,7 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
           .map((op, index) => ({ ...op, rank: index + 1 }))
 
         setOperations(topOps)
-        console.log("[v0] Top operations calculated:", topOps)
+        console.log("[v0] Top operations calculated:", topOps, "for period:", dateRange)
       } catch (error) {
         console.error("[v0] Error fetching top operations:", error)
       } finally {
@@ -77,21 +89,21 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
     if (rank === 1) {
       return (
         <div className="w-[34px] h-[34px] flex items-center justify-center">
-          <Image src="/acess/assets/rank1.png" alt="1st place" width={34} height={34} className="object-contain" />
+          <Image src="/assets/rank1.png" alt="1st place" width={34} height={34} className="object-contain" />
         </div>
       )
     }
     if (rank === 2) {
       return (
         <div className="w-[34px] h-[34px] flex items-center justify-center">
-          <Image src="/acess/assets/rank2.png" alt="2nd place" width={34} height={34} className="object-contain" />
+          <Image src="/assets/rank2.png" alt="2nd place" width={34} height={34} className="object-contain" />
         </div>
       )
     }
     if (rank === 3) {
       return (
         <div className="w-[34px] h-[34px] flex items-center justify-center">
-          <Image src="/acess/assets/rank3.png" alt="3rd place" width={34} height={34} className="object-contain" />
+          <Image src="/assets/rank3.png" alt="3rd place" width={34} height={34} className="object-contain" />
         </div>
       )
     }
@@ -103,7 +115,8 @@ export function TopOperationsCard({ dateRange }: TopOperationsCardProps) {
       <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
         <h4 className="text-lg font-semibold text-white">Top operações</h4>
         <p className="text-base text-[#8c89b4]">
-          {dateRange.start.split("/")[0]} de ago. - {dateRange.end.split("/")[0]} de ago
+          {dateRange.start.split("/")[0]} de {getMonthAbbreviation(currentMonth)}. - {dateRange.end.split("/")[0]} de{" "}
+          {getMonthAbbreviation(currentMonth)}
         </p>
       </div>
 

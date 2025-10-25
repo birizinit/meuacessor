@@ -10,8 +10,33 @@ export default function OperacoesPage() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "today">("month")
-  const [currentMonth, setCurrentMonth] = useState("Agosto")
-  const [dateRange, setDateRange] = useState({ start: "01/08/2025", end: "31/08/2025" })
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const months = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ]
+    return months[new Date().getMonth()]
+  })
+  const [dateRange, setDateRange] = useState(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + 1
+    const lastDay = new Date(year, month, 0).getDate()
+    return {
+      start: `01/${month.toString().padStart(2, "0")}/${year}`,
+      end: `${lastDay}/${month.toString().padStart(2, "0")}/${year}`,
+    }
+  })
 
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated")
@@ -43,7 +68,7 @@ export default function OperacoesPage() {
       />
       <main className="pb-12">
         <div className="container mx-auto px-4 md:px-10 lg:px-[124px] max-w-[1920px]">
-          <OperationsTable />
+          <OperationsTable dateRange={dateRange} selectedPeriod={selectedPeriod} />
         </div>
       </main>
     </div>

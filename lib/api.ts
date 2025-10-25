@@ -74,6 +74,12 @@ export class MyBrokerAPI {
       ...(options?.headers as Record<string, string>),
     }
 
+    console.log("[v0] API Request:", {
+      url,
+      method: options?.method || "GET",
+      headers: { ...headers, "api-token": "***" },
+    })
+
     const response = await fetch(url, {
       ...options,
       headers,
@@ -90,10 +96,12 @@ export class MyBrokerAPI {
         errorMessage = errorText || errorMessage
       }
 
+      console.error("[v0] API Error:", { url, status: response.status, error: errorMessage })
       throw new Error(errorMessage)
     }
 
     const data = await response.json()
+    console.log("[v0] API Response:", { url, dataCount: Array.isArray(data?.data) ? data.data.length : "N/A" })
     return data
   }
 
@@ -129,7 +137,9 @@ export class MyBrokerAPI {
 
 export function getApiToken(): string | null {
   if (typeof window === "undefined") return null
-  return localStorage.getItem("apiToken")
+  const token = localStorage.getItem("apiToken")
+  console.log("[v0] Getting API token:", token ? "Token found" : "No token found")
+  return token
 }
 
 export function setApiToken(token: string): void {
@@ -144,7 +154,11 @@ export function removeApiToken(): void {
 
 export function createApiClient(): MyBrokerAPI | null {
   const token = getApiToken()
-  if (!token) return null
+  if (!token) {
+    console.error("[v0] Cannot create API client: No token found")
+    return null
+  }
+  console.log("[v0] API client created successfully")
   return new MyBrokerAPI(token)
 }
 

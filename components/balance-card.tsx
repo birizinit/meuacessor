@@ -3,34 +3,51 @@ import { Card } from "@/components/ui/card"
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { useState, useEffect } from "react"
 import { createApiClient } from "@/lib/api"
+import { getMonthAbbreviation } from "@/lib/date-utils"
 
 interface BalanceCardProps {
   dateRange: { start: string; end: string }
+  selectedPeriod: "week" | "month" | "today"
+  currentMonth: string
 }
 
-export function BalanceCard({ dateRange }: BalanceCardProps) {
-  const [chartData, setChartData] = useState<{ day: number; gain: number; loss: number }[]>([])
+export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: BalanceCardProps) {
+  const [chartData, setChartData] = useState<{ day: number; gain: number; loss: number; label: string }[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchWeeklyBalance = async () => {
+    const fetchBalanceData = async () => {
       const apiClient = createApiClient()
-      if (!apiClient) return
+      if (!apiClient) {
+        setError("API client não disponível. Faça login novamente.")
+        return
+      }
 
       setIsLoading(true)
+      setError(null)
       try {
         const response = await apiClient.getTrades(1, 100)
 
-        const weeklyData = new Map<number, { gain: number; loss: number }>()
+        const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
+        const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
+        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
 
-        const currentMonth = new Date().getMonth()
-        const currentYear = new Date().getFullYear()
-
-        response.data.forEach((trade) => {
+        const filteredTrades = response.data.filter((trade) => {
           const tradeDate = new Date(trade.openTime)
-          if (tradeDate.getMonth() === currentMonth && tradeDate.getFullYear() === currentYear) {
-            const day = tradeDate.getDate()
-            const weekIndex = Math.floor((day - 1) / 7) + 1
+          return tradeDate >= startDate && tradeDate <= endDate
+        })
+
+        let data: { day: number; gain: number; loss: number; label: string }[] = []
+
+        if (selectedPeriod === "month") {
+          const weeklyData = new Map<number, { gain: number; loss: number }>()
+
+          filteredTrades.forEach((trade) => {
+            const tradeDate = new Date(trade.openTime)
+            const dayOfMonth = tradeDate.getDate()
+            const weekIndex = Math.floor((dayOfMonth - 1) / 7) + 1
 
             const existing = weeklyData.get(weekIndex) || { gain: 0, loss: 0 }
 
@@ -41,29 +58,85 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
             }
 
             weeklyData.set(weekIndex, existing)
-          }
-        })
+          })
 
-        const data = Array.from({ length: 4 }, (_, i) => {
-          const weekData = weeklyData.get(i + 1) || { gain: 0, loss: 0 }
-          return {
-            day: (i + 1) * 7,
-            gain: weekData.gain,
-            loss: weekData.loss,
-          }
-        })
+          data = Array.from({ length: 4 }, (_, i) => {
+            const weekData = weeklyData.get(i + 1) || { gain: 0, loss: 0 }
+            return {
+              day: (i + 1) * 7,
+              gain: weekData.gain,
+              loss: weekData.loss,
+              label: `Sem ${i + 1}`,
+            }
+          })
+        } else if (selectedPeriod === "week") {
+          const dailyData = new Map<number, { gain: number; loss: number }>()
+
+          filteredTrades.forEach((trade) => {
+            const tradeDate = new Date(trade.openTime)
+            const dayOfWeek = tradeDate.getDay()
+
+            const existing = dailyData.get(dayOfWeek) || { gain: 0, loss: 0 }
+
+            if (trade.pnl > 0) {
+              existing.gain += trade.pnl
+            } else {
+              existing.loss += Math.abs(trade.pnl)
+            }
+
+            dailyData.set(dayOfWeek, existing)
+          })
+
+          const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+          data = Array.from({ length: 7 }, (_, i) => {
+            const dayData = dailyData.get(i) || { gain: 0, loss: 0 }
+            return {
+              day: i,
+              gain: dayData.gain,
+              loss: dayData.loss,
+              label: dayNames[i],
+            }
+          })
+        } else {
+          const hourlyData = new Map<number, { gain: number; loss: number }>()
+
+          filteredTrades.forEach((trade) => {
+            const tradeDate = new Date(trade.openTime)
+            const hour = tradeDate.getHours()
+
+            const existing = hourlyData.get(hour) || { gain: 0, loss: 0 }
+
+            if (trade.pnl > 0) {
+              existing.gain += trade.pnl
+            } else {
+              existing.loss += Math.abs(trade.pnl)
+            }
+
+            hourlyData.set(hour, existing)
+          })
+
+          data = Array.from({ length: 24 }, (_, i) => {
+            const hourData = hourlyData.get(i) || { gain: 0, loss: 0 }
+            return {
+              day: i,
+              gain: hourData.gain,
+              loss: hourData.loss,
+              label: `${i}h`,
+            }
+          })
+        }
 
         setChartData(data)
-        console.log("[v0] Weekly balance calculated:", data)
       } catch (error) {
-        console.error("[v0] Error fetching weekly balance:", error)
+        console.error("[v0] BalanceCard: Error fetching balance data:", error)
+        setError(error instanceof Error ? error.message : "Erro ao carregar dados")
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchWeeklyBalance()
-  }, [dateRange])
+    fetchBalanceData()
+  }, [dateRange, selectedPeriod])
 
   const CustomDot = (props: any) => {
     const { cx, cy, index, payload } = props
@@ -80,7 +153,7 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
       <circle
         cx={cx}
         cy={cy}
-        r={4}
+        r={5}
         fill={color}
         style={{
           filter: `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}) drop-shadow(0 0 12px ${color})`,
@@ -92,16 +165,22 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
-      const value = data.gain
-      const formattedValue = new Intl.NumberFormat("pt-BR", {
+      const gainValue = data.gain
+      const lossValue = data.loss
+      const formattedGain = new Intl.NumberFormat("pt-BR", {
         style: "currency",
         currency: "BRL",
-      }).format(value)
+      }).format(gainValue)
+      const formattedLoss = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(lossValue)
 
       return (
         <div className="bg-[#2a2a5a] border border-[#3a3a6a] rounded-lg p-3 shadow-lg">
-          <p className="text-white text-sm font-semibold">{`Semana ${Math.floor(data.day / 7)}`}</p>
-          <p className="text-[#16c784] text-sm font-bold">{formattedValue}</p>
+          <p className="text-white text-sm font-semibold mb-2">{data.label}</p>
+          <p className="text-[#16c784] text-sm font-bold">Ganho: {formattedGain}</p>
+          <p className="text-[#f2474a] text-sm font-bold">Perda: {formattedLoss}</p>
         </div>
       )
     }
@@ -123,16 +202,21 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
           </span>
         </div>
         <p className="text-base text-[#8c89b4]">
-          {dateRange.start.split("/")[0]} de ago. - {dateRange.end.split("/")[0]} de ago
+          {dateRange.start.split("/")[0]} de {getMonthAbbreviation(currentMonth)}. - {dateRange.end.split("/")[0]} de{" "}
+          {getMonthAbbreviation(currentMonth)}
         </p>
       </div>
 
       {isLoading ? (
         <div className="text-center py-8 text-[#aeabd8]">Carregando...</div>
+      ) : error ? (
+        <div className="text-center py-8 text-[#f2474a]">{error}</div>
+      ) : chartData.length === 0 ? (
+        <div className="text-center py-8 text-[#aeabd8]">Nenhum dado disponível para o período</div>
       ) : (
-        <div className="relative w-full h-[280px] mt-5">
+        <div className="relative w-full h-[320px] mt-5">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+            <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
               <defs>
                 <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#16c784" stopOpacity={0.3} />
@@ -140,12 +224,11 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
                 </linearGradient>
               </defs>
               <XAxis
-                dataKey="day"
+                dataKey="label"
                 stroke="#8c89b4"
                 tick={{ fill: "#8c89b4", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value) => `Sem ${Math.floor(value / 7)}`}
               />
               <YAxis
                 stroke="#8c89b4"
@@ -159,11 +242,11 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
                 type="monotone"
                 dataKey="gain"
                 stroke="#16c784"
-                strokeWidth={2}
+                strokeWidth={3}
                 fill="url(#colorGain)"
                 animationDuration={1000}
                 dot={<CustomDot />}
-                activeDot={{ r: 6, fill: "#16c784", stroke: "#16c784", strokeWidth: 2 }}
+                activeDot={{ r: 7, fill: "#16c784", stroke: "#16c784", strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>

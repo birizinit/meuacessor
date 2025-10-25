@@ -85,7 +85,7 @@ export function ProjectionCard() {
       projectedValue = projectedValue * 22
     }
 
-    const percentageGain = (projectedValue / savedData.investment) * 100
+    const percentageGain = (projectedValue / savedData.bankValue) * 100
 
     return {
       percentage: percentageGain,
@@ -97,9 +97,11 @@ export function ProjectionCard() {
 
   const { percentage, projectedValue, investment, riskName } = getDisplayValues()
 
-  const radius = 80
-  const circumference = Math.PI * radius
-  const strokeDashoffset = circumference - (Math.min(percentage, 100) / 100) * circumference
+  const radius = 70
+  const strokeWidth = 18
+  const circumference = Math.PI * radius // Semicircle length
+  const fillPercentage = Math.min(Math.max(percentage, 0), 100) / 100
+  const strokeDashoffset = circumference * (1 - fillPercentage)
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -143,37 +145,39 @@ export function ProjectionCard() {
         </div>
       ) : (
         <>
-          <div className="relative mx-auto w-[240px] h-[180px] my-3 flex flex-col items-center justify-center">
-            <svg width="240" height="140" viewBox="0 0 240 140" className="absolute top-0">
+          <div className="relative mx-auto w-[200px] h-[130px] my-3 flex flex-col items-center justify-start">
+            <svg width="200" height="130" viewBox="0 0 200 130" className="absolute top-0">
+              {/* Background arc - dark shadow */}
               <path
-                d="M 30 120 A 80 80 0 0 1 210 120"
+                d="M 30 100 A 70 70 0 0 1 170 100"
                 fill="none"
-                stroke="#27264e"
-                strokeWidth="32"
-                strokeLinecap="square"
+                stroke="rgba(39, 38, 78, 0.8)"
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
               />
+              {/* Progress arc - fills from left to right based on percentage */}
               <path
-                d="M 30 120 A 80 80 0 0 1 210 120"
+                d="M 30 100 A 70 70 0 0 1 170 100"
                 fill="none"
                 stroke="#00ff88"
-                strokeWidth="32"
-                strokeLinecap="square"
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 style={{
-                  transition: "stroke-dashoffset 0.3s ease",
-                  filter: "drop-shadow(0 0 8px rgba(0, 255, 136, 0.6))",
+                  transition: "stroke-dashoffset 0.5s ease",
+                  filter: "drop-shadow(0 0 10px rgba(0, 255, 136, 0.5))",
                 }}
               />
             </svg>
 
-            <div className="text-center mt-8">
+            <div className="text-center mt-14 relative z-10">
               <p className="text-3xl font-bold text-white">{percentage.toFixed(1)}%</p>
-              <p className="text-sm text-[#00ff88]">R${formatCurrency(projectedValue)}</p>
+              <p className="text-sm text-[#00ff88] mt-1">R${formatCurrency(projectedValue)}</p>
             </div>
           </div>
 
-          <div className="flex justify-between items-end text-sm mt-8">
+          <div className="flex justify-between items-end text-sm mt-6">
             <span className="text-[#f2474a] flex items-center gap-1">
               R$0
               <Image src="/assets/ARROWDOWN.svg" alt="Down" width={12} height={12} />

@@ -54,7 +54,12 @@ function tradeToOperation(trade: Trade): Operation {
   }
 }
 
-export function OperationsTable() {
+interface OperationsTableProps {
+  dateRange: { start: string; end: string }
+  selectedPeriod: "week" | "month" | "today"
+}
+
+export function OperationsTable({ dateRange, selectedPeriod }: OperationsTableProps) {
   const [filter, setFilter] = useState<FilterType>("all")
   const [operations, setOperations] = useState<Operation[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -73,11 +78,21 @@ export function OperationsTable() {
       setIsLoading(true)
       setError(null)
       try {
-        // Fetch all trades (you can adjust pagination as needed)
         const response = await apiClient.getTrades(1, 100)
-        const ops = response.data.map(tradeToOperation)
+
+        const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
+        const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
+        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
+
+        const filteredTrades = response.data.filter((trade) => {
+          const tradeDate = new Date(trade.openTime)
+          return tradeDate >= startDate && tradeDate <= endDate
+        })
+
+        const ops = filteredTrades.map(tradeToOperation)
         setOperations(ops)
-        console.log("[v0] Fetched operations:", ops.length)
+        console.log("[v0] Fetched operations:", ops.length, "for period:", dateRange)
       } catch (err) {
         console.error("[v0] Error fetching operations:", err)
         setError(err instanceof Error ? err.message : "Erro ao carregar operações")
@@ -87,7 +102,7 @@ export function OperationsTable() {
     }
 
     fetchOperations()
-  }, [])
+  }, [dateRange, selectedPeriod])
 
   const filteredOperations = useMemo(() => {
     if (filter === "positive") return operations.filter((o) => o.resultBRL > 0)

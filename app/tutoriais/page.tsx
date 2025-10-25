@@ -35,28 +35,28 @@ export default function TutoriaisPage() {
       id: 1,
       title: "Como operar pela primeira vez",
       duration: "15:00",
-      watched: true,
+      watched: false,
       videoUrl: "DumytDSlii0",
     },
     {
       id: 2,
       title: "Como fazer deposito",
       duration: "10:30",
-      watched: true,
+      watched: false,
       videoUrl: "SaA1V7dT_9E",
     },
     {
       id: 3,
       title: "Como fazer seu saque",
       duration: "08:45",
-      watched: true,
+      watched: false,
       videoUrl: "18-6Tzz_hbI",
     },
     {
       id: 4,
       title: "Como fazer xxxxx",
       duration: "12:20",
-      watched: true,
+      watched: false,
       videoUrl: "pUodwfXHt00",
     },
     {
@@ -105,13 +105,11 @@ export default function TutoriaisPage() {
   useEffect(() => {
     if (!isAuthenticated) return
 
-    // Carregar API do YouTube
     const tag = document.createElement("script")
     tag.src = "https://www.youtube.com/iframe_api"
     const firstScriptTag = document.getElementsByTagName("script")[0]
     firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
 
-    // Callback quando a API estiver pronta
     window.onYouTubeIframeAPIReady = () => {
       initializePlayer()
     }
@@ -152,18 +150,17 @@ export default function TutoriaisPage() {
   }
 
   const onPlayerStateChange = (event: any) => {
-    // 0 = ended
     if (event.data === 0) {
-      markCurrentVideoAsWatched()
+      toggleVideoWatched()
     }
   }
 
-  const markCurrentVideoAsWatched = () => {
+  const toggleVideoWatched = () => {
     const updatedVideos = [...videos]
     const videoId = filteredVideos[currentVideoIndex].id
     const videoIndex = updatedVideos.findIndex((v) => v.id === videoId)
-    if (videoIndex !== -1 && !updatedVideos[videoIndex].watched) {
-      updatedVideos[videoIndex].watched = true
+    if (videoIndex !== -1) {
+      updatedVideos[videoIndex].watched = !updatedVideos[videoIndex].watched
       setVideos(updatedVideos)
     }
   }
@@ -178,7 +175,7 @@ export default function TutoriaisPage() {
   }
 
   const handleNextVideo = () => {
-    markCurrentVideoAsWatched()
+    toggleVideoWatched()
     if (currentVideoIndex < filteredVideos.length - 1) {
       setCurrentVideoIndex(currentVideoIndex + 1)
     }
@@ -200,7 +197,6 @@ export default function TutoriaisPage() {
       <main className="pb-12">
         <div className="container mx-auto px-4 md:px-10 lg:px-[124px] max-w-[1920px]">
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left Sidebar - Video List */}
             <div className="lg:w-[380px] bg-[#1d1d41] border border-[rgba(174,171,216,0.25)] rounded-xl p-6">
               <div className="mb-6">
                 <p className="text-[#aeabd8] text-sm mb-2">Seu progresso de aprendizagem</p>
@@ -213,7 +209,6 @@ export default function TutoriaisPage() {
                 <p className="text-[#7c3aed] text-sm font-semibold mt-2">{progressPercentage}%</p>
               </div>
 
-              {/* Search */}
               <div className="relative mb-6">
                 <Input
                   type="text"
@@ -225,7 +220,6 @@ export default function TutoriaisPage() {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeabd8]" />
               </div>
 
-              {/* Video List */}
               <div className="space-y-1">
                 {filteredVideos.map((video, index) => (
                   <button
@@ -245,7 +239,6 @@ export default function TutoriaisPage() {
               </div>
             </div>
 
-            {/* Right Side - Video Player */}
             <div className="flex-1 bg-[#1d1d41] border border-[rgba(174,171,216,0.25)] rounded-xl p-6">
               {currentVideo ? (
                 <>
@@ -253,7 +246,6 @@ export default function TutoriaisPage() {
                     <div ref={playerContainerRef} className="w-full h-full" />
                   </div>
 
-                  {/* Video Info */}
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-white text-xl font-semibold mb-1">{currentVideo.title}</h3>
@@ -262,14 +254,9 @@ export default function TutoriaisPage() {
                   </div>
 
                   <div className="flex gap-3">
-                    {!currentVideo.watched && (
-                      <Button
-                        onClick={markCurrentVideoAsWatched}
-                        className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
-                      >
-                        Marcar como visualizado
-                      </Button>
-                    )}
+                    <Button onClick={toggleVideoWatched} className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white">
+                      {currentVideo.watched ? "Marcar como não visualizado" : "Marcar como visualizado"}
+                    </Button>
                     {currentVideoIndex < filteredVideos.length - 1 && (
                       <Button
                         onClick={handleNextVideo}

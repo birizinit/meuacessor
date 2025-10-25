@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
@@ -20,7 +22,8 @@ interface SavedProjection {
 }
 
 export function CalculatorCard() {
-  const [bankValue, setBankValue] = useState(5000)
+  const [bankValue, setBankValue] = useState(125)
+  const [inputValue, setInputValue] = useState("125,00")
   const [selectedRisk, setSelectedRisk] = useState<RiskProfile>("conservative")
   const [projectionPeriod, setProjectionPeriod] = useState<"day" | "month">("day")
   const [showCalendar, setShowCalendar] = useState(false)
@@ -36,6 +39,7 @@ export function CalculatorCard() {
       try {
         const data: SavedProjection = JSON.parse(savedProjection)
         setBankValue(data.bankValue)
+        setInputValue(formatCurrency(data.bankValue))
         setSelectedRisk(data.selectedRisk)
         setProjectionPeriod(data.projectionPeriod)
         setSelectedDay(data.selectedDay || null)
@@ -71,7 +75,8 @@ export function CalculatorCard() {
   }
 
   const handleClear = () => {
-    setBankValue(5000)
+    setBankValue(125)
+    setInputValue("125,00")
     setSelectedRisk("conservative")
     setProjectionPeriod("day")
     setSelectedDay(null)
@@ -124,6 +129,23 @@ export function CalculatorCard() {
     }).format(value)
   }
 
+  const handleBankValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    const cleanValue = value.replace(/[^\d,]/g, "")
+    const parts = cleanValue.split(",")
+    const integerPart = parts[0] || "0"
+    const decimalPart = parts[1] || ""
+    const numericValue =
+      Number.parseInt(integerPart) + (decimalPart ? Number.parseInt(decimalPart.padEnd(2, "0").slice(0, 2)) / 100 : 0)
+    setBankValue(numericValue)
+    const formatted = formatCurrency(numericValue)
+    setInputValue(formatted)
+  }
+
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select()
+  }
+
   const getDaysInMonth = () => {
     const year = 2025
     const month = 7
@@ -154,12 +176,9 @@ export function CalculatorCard() {
             <span className="text-[#aeabd8] mr-1.5">R$</span>
             <input
               type="text"
-              value={formatCurrency(bankValue)}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "")
-                const numValue = Number.parseInt(value) || 0
-                setBankValue(numValue)
-              }}
+              value={inputValue}
+              onChange={handleBankValueChange}
+              onFocus={handleInputFocus}
               className="bg-transparent border-none text-white text-base font-bold w-full outline-none"
               placeholder="0,00"
             />

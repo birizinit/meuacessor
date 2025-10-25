@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Bell, X } from "lucide-react"
+import { Bell, X, Trash2 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { createApiClient } from "@/lib/api"
 
@@ -12,6 +12,7 @@ interface Notification {
   date: string
   message: string
   unread: boolean
+  type: "trade_success" | "trade_failure" | "deposit" | "withdrawal" | "level_up"
 }
 
 export function Header() {
@@ -38,39 +39,29 @@ export function Header() {
 
     fetchUserData()
 
-    // Load notifications from localStorage or use default
     const savedNotifications = localStorage.getItem("notifications")
     if (savedNotifications) {
-      setNotifications(JSON.parse(savedNotifications))
-    } else {
-      const defaultNotifications = [
-        {
-          id: 1,
-          date: "10 de Ago - 13h",
-          message: "Você acaba de aportar um valor de R$50 em Bitcoin",
-          unread: true,
-        },
-        {
-          id: 2,
-          date: "10 de Ago - 13h",
-          message: "Você acaba de aportar um valor de R$200 em Bitcoin",
-          unread: true,
-        },
-        {
-          id: 3,
-          date: "05 de Fev - 15:08h",
-          message: "Você acaba de aportar um valor de R$50 em Bitcoin",
-          unread: true,
-        },
-        {
-          id: 4,
-          date: "01 de Jan - 13:10h",
-          message: "Você acaba de mudar de nível! 👋 Muito bom Pedro! Continue assim!",
-          unread: true,
-        },
-      ]
-      setNotifications(defaultNotifications)
-      localStorage.setItem("notifications", JSON.stringify(defaultNotifications))
+      try {
+        setNotifications(JSON.parse(savedNotifications))
+      } catch (error) {
+        console.error("[v0] Error parsing notifications:", error)
+        setNotifications([])
+      }
+    }
+
+    const handleNewNotification = (event: CustomEvent) => {
+      const newNotification = event.detail as Notification
+      setNotifications((prev) => {
+        const updated = [newNotification, ...prev]
+        localStorage.setItem("notifications", JSON.stringify(updated))
+        return updated
+      })
+    }
+
+    window.addEventListener("newNotification" as any, handleNewNotification)
+
+    return () => {
+      window.removeEventListener("newNotification" as any, handleNewNotification)
     }
   }, [])
 
@@ -88,12 +79,17 @@ export function Header() {
 
   const unreadCount = notifications.filter((n) => n.unread).length
 
-  const handleNotificationHover = (id: number) => {
+  const handleNotificationClick = (id: number) => {
     setNotifications((prev) => {
       const updated = prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
       localStorage.setItem("notifications", JSON.stringify(updated))
       return updated
     })
+  }
+
+  const handleClearAll = () => {
+    setNotifications([])
+    localStorage.removeItem("notifications")
   }
 
   const navItems = [
@@ -129,6 +125,17 @@ export function Header() {
     }
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour >= 5 && hour < 12) {
+      return "Bom dia"
+    } else if (hour >= 12 && hour < 18) {
+      return "Boa tarde"
+    } else {
+      return "Boa noite"
+    }
+  }
+
   return (
     <header className="py-7 relative">
       <div className="container mx-auto px-4 md:px-10 lg:px-[124px] max-w-[1920px]">
@@ -143,7 +150,9 @@ export function Header() {
             </Link>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="font-semibold text-[20.8px] text-white">Bom dia, {userName}!</h2>
+                <h2 className="font-semibold text-[20.8px] text-white">
+                  {getGreeting()}, {userName}!
+                </h2>
                 <Image src="/assets/hands.png" alt="👋" width={22} height={22} />
               </div>
               <p className="text-[13.9px] text-[#aeabd8]">Suas operações vão muito bem, continue assim!</p>
@@ -186,31 +195,52 @@ export function Header() {
                     <div className="absolute right-0 top-12 w-[348px] bg-[#1d1d41] border border-[rgba(174,171,216,0.25)] rounded-xl shadow-2xl z-50 overflow-hidden">
                       <div className="flex items-center justify-between p-4 border-b border-[rgba(174,171,216,0.15)]">
                         <h3 className="text-white font-semibold text-lg">Avisos</h3>
-                        <button
-                          onClick={() => setShowNotifications(false)}
-                          className="p-1 hover:bg-[#27264e]/50 rounded-lg transition-colors"
-                        >
-                          <X className="w-5 h-5 text-[#aeabd8]" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {notifications.length > 0 && (
+                            <button
+                              onClick={handleClearAll}
+                              className="p-1.5 hover:bg-[#27264e]/50 rounded-lg transition-colors"
+                              title="Limpar todas"
+                            >
+                              <Trash2 className="w-4 h-4 text-[#aeabd8]" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setShowNotifications(false)}
+                            className="p-1 hover:bg-[#27264e]/50 rounded-lg transition-colors"
+                          >
+                            <X className="w-5 h-5 text-[#aeabd8]" />
+                          </button>
+                        </div>
                       </div>
                       <div className="max-h-[500px] overflow-y-auto">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            onMouseEnter={() => handleNotificationHover(notification.id)}
-                            className="p-4 border-b border-[rgba(174,171,216,0.15)] hover:bg-[#27264e]/30 transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1">
-                                <p className="text-[#aeabd8] text-xs mb-2">{notification.date}</p>
-                                <p className="text-white text-sm leading-relaxed">{notification.message}</p>
-                              </div>
-                              {notification.unread && (
-                                <div className="w-2 h-2 bg-[#7c3aed] rounded-full mt-1 flex-shrink-0" />
-                              )}
-                            </div>
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center">
+                            <Bell className="w-12 h-12 text-[#aeabd8] mx-auto mb-3 opacity-50" />
+                            <p className="text-[#aeabd8] text-sm">Nenhuma notificação</p>
+                            <p className="text-[#8c89b4] text-xs mt-1">
+                              Você será notificado sobre trades, depósitos e saques
+                            </p>
                           </div>
-                        ))}
+                        ) : (
+                          notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              onClick={() => handleNotificationClick(notification.id)}
+                              className="p-4 border-b border-[rgba(174,171,216,0.15)] hover:bg-[#27264e]/30 transition-colors cursor-pointer"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <p className="text-[#aeabd8] text-xs mb-2">{notification.date}</p>
+                                  <p className="text-white text-sm leading-relaxed">{notification.message}</p>
+                                </div>
+                                {notification.unread && (
+                                  <div className="w-2 h-2 bg-[#7c3aed] rounded-full mt-1 flex-shrink-0" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </>
