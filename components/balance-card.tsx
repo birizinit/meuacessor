@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card"
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { useState, useEffect } from "react"
+import { createApiClient } from "@/lib/api"
 
 interface BalanceCardProps {
   dateRange: { start: string; end: string }
@@ -9,14 +10,59 @@ interface BalanceCardProps {
 
 export function BalanceCard({ dateRange }: BalanceCardProps) {
   const [chartData, setChartData] = useState<{ day: number; gain: number; loss: number }[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    const data = Array.from({ length: 12 }, (_, i) => ({
-      day: i + 1,
-      gain: Math.floor(Math.random() * 40000) + 15000,
-      loss: Math.floor(Math.random() * 20000) + 5000,
-    }))
-    setChartData(data)
+    const fetchWeeklyBalance = async () => {
+      const apiClient = createApiClient()
+      if (!apiClient) return
+
+      setIsLoading(true)
+      try {
+        const response = await apiClient.getTrades(1, 100)
+
+        const weeklyData = new Map<number, { gain: number; loss: number }>()
+
+        const currentMonth = new Date().getMonth()
+        const currentYear = new Date().getFullYear()
+
+        response.data.forEach((trade) => {
+          const tradeDate = new Date(trade.openTime)
+          if (tradeDate.getMonth() === currentMonth && tradeDate.getFullYear() === currentYear) {
+            const day = tradeDate.getDate()
+            const weekIndex = Math.floor((day - 1) / 7) + 1
+
+            const existing = weeklyData.get(weekIndex) || { gain: 0, loss: 0 }
+
+            if (trade.pnl > 0) {
+              existing.gain += trade.pnl
+            } else {
+              existing.loss += Math.abs(trade.pnl)
+            }
+
+            weeklyData.set(weekIndex, existing)
+          }
+        })
+
+        const data = Array.from({ length: 4 }, (_, i) => {
+          const weekData = weeklyData.get(i + 1) || { gain: 0, loss: 0 }
+          return {
+            day: (i + 1) * 7,
+            gain: weekData.gain,
+            loss: weekData.loss,
+          }
+        })
+
+        setChartData(data)
+        console.log("[v0] Weekly balance calculated:", data)
+      } catch (error) {
+        console.error("[v0] Error fetching weekly balance:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchWeeklyBalance()
   }, [dateRange])
 
   const CustomDot = (props: any) => {
@@ -54,7 +100,7 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
 
       return (
         <div className="bg-[#2a2a5a] border border-[#3a3a6a] rounded-lg p-3 shadow-lg">
-          <p className="text-white text-sm font-semibold">{`${data.day} de Agosto`}</p>
+          <p className="text-white text-sm font-semibold">{`Semana ${Math.floor(data.day / 7)}`}</p>
           <p className="text-[#16c784] text-sm font-bold">{formattedValue}</p>
         </div>
       )
@@ -80,43 +126,49 @@ export function BalanceCard({ dateRange }: BalanceCardProps) {
           {dateRange.start.split("/")[0]} de ago. - {dateRange.end.split("/")[0]} de ago
         </p>
       </div>
-      <div className="relative w-full h-[280px] mt-5">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-            <defs>
-              <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#16c784" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#16c784" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="day"
-              stroke="#8c89b4"
-              tick={{ fill: "#8c89b4", fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              stroke="#8c89b4"
-              tick={{ fill: "#8c89b4", fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(value) => `${value / 1000}K`}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={false} />
-            <Area
-              type="monotone"
-              dataKey="gain"
-              stroke="#16c784"
-              strokeWidth={2}
-              fill="url(#colorGain)"
-              animationDuration={1000}
-              dot={<CustomDot />}
-              activeDot={{ r: 6, fill: "#16c784", stroke: "#16c784", strokeWidth: 2 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+
+      {isLoading ? (
+        <div className="text-center py-8 text-[#aeabd8]">Carregando...</div>
+      ) : (
+        <div className="relative w-full h-[280px] mt-5">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+              <defs>
+                <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#16c784" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#16c784" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="day"
+                stroke="#8c89b4"
+                tick={{ fill: "#8c89b4", fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) => `Sem ${Math.floor(value / 7)}`}
+              />
+              <YAxis
+                stroke="#8c89b4"
+                tick={{ fill: "#8c89b4", fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) => `${value / 1000}K`}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={false} />
+              <Area
+                type="monotone"
+                dataKey="gain"
+                stroke="#16c784"
+                strokeWidth={2}
+                fill="url(#colorGain)"
+                animationDuration={1000}
+                dot={<CustomDot />}
+                activeDot={{ r: 6, fill: "#16c784", stroke: "#16c784", strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </Card>
   )
 }

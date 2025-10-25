@@ -1,11 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
 type RiskProfile = "conservative" | "moderate" | "aggressive"
+
+interface SavedProjection {
+  bankValue: number
+  selectedRisk: RiskProfile
+  projectionPeriod: "day" | "month"
+  selectedDay?: number
+  selectedPeriodStart?: number
+  selectedPeriodEnd?: number
+  investment: number
+  projection: number
+  savedAt: string
+}
 
 export function CalculatorCard() {
   const [bankValue, setBankValue] = useState(5000)
@@ -17,6 +29,23 @@ export function CalculatorCard() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [selectedPeriodStart, setSelectedPeriodStart] = useState<number | null>(null)
   const [selectedPeriodEnd, setSelectedPeriodEnd] = useState<number | null>(null)
+
+  useEffect(() => {
+    const savedProjection = localStorage.getItem("savedProjection")
+    if (savedProjection) {
+      try {
+        const data: SavedProjection = JSON.parse(savedProjection)
+        setBankValue(data.bankValue)
+        setSelectedRisk(data.selectedRisk)
+        setProjectionPeriod(data.projectionPeriod)
+        setSelectedDay(data.selectedDay || null)
+        setSelectedPeriodStart(data.selectedPeriodStart || null)
+        setSelectedPeriodEnd(data.selectedPeriodEnd || null)
+      } catch (error) {
+        console.error("[v0] Error loading saved projection:", error)
+      }
+    }
+  }, [])
 
   const riskProfiles = {
     conservative: { percent: 1, name: "Conservador", icon: "/assets/porco.png" },
@@ -30,8 +59,15 @@ export function CalculatorCard() {
 
   const calculateProjection = () => {
     const investment = calculateInvestment()
-    const dailyReturn = investment * 0.87 * 0.6
-    return projectionPeriod === "day" ? dailyReturn : dailyReturn * 22
+    const winRate = 0.87
+    const payout = 0.6
+
+    if (projectionPeriod === "day") {
+      return investment * winRate * payout
+    } else {
+      const dailyReturn = investment * winRate * payout
+      return dailyReturn * 22
+    }
   }
 
   const handleClear = () => {
@@ -41,6 +77,7 @@ export function CalculatorCard() {
     setSelectedDay(null)
     setSelectedPeriodStart(null)
     setSelectedPeriodEnd(null)
+    localStorage.removeItem("savedProjection")
   }
 
   const handleSave = () => {
@@ -58,23 +95,26 @@ export function CalculatorCard() {
   }
 
   const handleConfirmOperation = () => {
+    const projectionData: SavedProjection = {
+      bankValue,
+      selectedRisk,
+      projectionPeriod,
+      selectedDay: selectedDay || undefined,
+      selectedPeriodStart: selectedPeriodStart || undefined,
+      selectedPeriodEnd: selectedPeriodEnd || undefined,
+      investment: calculateInvestment(),
+      projection: calculateProjection(),
+      savedAt: new Date().toISOString(),
+    }
+
+    localStorage.setItem("savedProjection", JSON.stringify(projectionData))
+    window.dispatchEvent(new Event("projectionUpdated"))
     setShowConfirmation(false)
     setShowSuccess(true)
-    console.log("[v0] Operação confirmada:", {
-      riskProfile: selectedRisk,
-      bankValue,
-      projectionPeriod,
-      selectedDay,
-      selectedPeriodStart,
-      selectedPeriodEnd,
-    })
   }
 
   const handleCloseSuccess = () => {
     setShowSuccess(false)
-    setSelectedDay(null)
-    setSelectedPeriodStart(null)
-    setSelectedPeriodEnd(null)
   }
 
   const formatCurrency = (value: number) => {
@@ -86,7 +126,7 @@ export function CalculatorCard() {
 
   const getDaysInMonth = () => {
     const year = 2025
-    const month = 7 // Agosto (0-indexed)
+    const month = 7
     const firstDay = new Date(year, month, 1).getDay()
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     const days = []
@@ -117,9 +157,11 @@ export function CalculatorCard() {
               value={formatCurrency(bankValue)}
               onChange={(e) => {
                 const value = e.target.value.replace(/\D/g, "")
-                setBankValue(Number.parseInt(value) || 0)
+                const numValue = Number.parseInt(value) || 0
+                setBankValue(numValue)
               }}
               className="bg-transparent border-none text-white text-base font-bold w-full outline-none"
+              placeholder="0,00"
             />
           </div>
         </div>

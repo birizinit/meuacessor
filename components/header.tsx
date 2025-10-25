@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Bell, X } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
+import { createApiClient } from "@/lib/api"
 
 interface Notification {
   id: number
@@ -18,10 +19,25 @@ export function Header() {
   const [activeNav, setActiveNav] = useState("Home")
   const [showNotifications, setShowNotifications] = useState(false)
   const router = useRouter()
+  const [userName, setUserName] = useState("Usuário")
 
   const [notifications, setNotifications] = useState<Notification[]>([])
 
   useEffect(() => {
+    const fetchUserData = async () => {
+      const apiClient = createApiClient()
+      if (!apiClient) return
+
+      try {
+        const userData = await apiClient.getUserInfo()
+        setUserName(userData.name || userData.nickname || "Usuário")
+      } catch (error) {
+        console.error("[v0] Error fetching user data:", error)
+      }
+    }
+
+    fetchUserData()
+
     // Load notifications from localStorage or use default
     const savedNotifications = localStorage.getItem("notifications")
     if (savedNotifications) {
@@ -58,6 +74,18 @@ export function Header() {
     }
   }, [])
 
+  useEffect(() => {
+    if (pathname === "/operacoes") {
+      setActiveNav("Operações")
+    } else if (pathname === "/tutoriais") {
+      setActiveNav("Tutoriais")
+    } else if (pathname === "/perfil") {
+      setActiveNav("Meu perfil")
+    } else {
+      setActiveNav("Home")
+    }
+  }, [pathname])
+
   const unreadCount = notifications.filter((n) => n.unread).length
 
   const handleNotificationHover = (id: number) => {
@@ -75,18 +103,6 @@ export function Header() {
     { key: "Meu perfil", label: "Meu perfil" },
     { key: "Sair", label: "Sair" },
   ]
-
-  useEffect(() => {
-    if (pathname === "/operacoes") {
-      setActiveNav("Operações")
-    } else if (pathname === "/tutoriais") {
-      setActiveNav("Tutoriais")
-    } else if (pathname === "/perfil") {
-      setActiveNav("Meu perfil")
-    } else {
-      setActiveNav("Home")
-    }
-  }, [pathname])
 
   const handleNavClick = (item: string) => {
     setActiveNav(item)
@@ -127,7 +143,7 @@ export function Header() {
             </Link>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="font-semibold text-[20.8px] text-white">Bom dia, Pedro!</h2>
+                <h2 className="font-semibold text-[20.8px] text-white">Bom dia, {userName}!</h2>
                 <Image src="/assets/hands.png" alt="👋" width={22} height={22} />
               </div>
               <p className="text-[13.9px] text-[#aeabd8]">Suas operações vão muito bem, continue assim!</p>

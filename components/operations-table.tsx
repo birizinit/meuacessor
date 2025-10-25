@@ -1,16 +1,8 @@
 "use client"
 
-import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Pagination,
   PaginationContent,
@@ -21,73 +13,16 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { createApiClient, formatCurrencyPair, type Trade } from "@/lib/api"
 
 export type Operation = {
   id: string
   pair: string
-  date: string // dd/MM/yyyy
-  time: string // HH:mm:ss
+  date: string
+  time: string
   contributionBRL: number
-  resultBRL: number // positive for profit, negative for loss
-  icon?: string
+  resultBRL: number
 }
-
-const INITIAL_OPERATIONS: Operation[] = [
-  {
-    id: "1",
-    pair: "BTC/ETH",
-    date: "15/08/2025",
-    time: "11:48:00",
-    contributionBRL: 10000,
-    resultBRL: 20000,
-    icon: "/assets/BTCECA.svg", // fallback icon
-  },
-  {
-    id: "2",
-    pair: "BNB/BTC",
-    date: "13/08/2025",
-    time: "13:40:00",
-    contributionBRL: 5000,
-    resultBRL: 10000,
-    icon: "/assets/BNBBTC.svg",
-  },
-  {
-    id: "3",
-    pair: "BTC/ECA",
-    date: "08/08/2025",
-    time: "12:28:08",
-    contributionBRL: 2000,
-    resultBRL: -5000,
-    icon: "/assets/BTCECA.svg",
-  },
-  {
-    id: "4",
-    pair: "BTC/ECA",
-    date: "05/08/2025",
-    time: "01:25:05",
-    contributionBRL: 2000,
-    resultBRL: 5000,
-    icon: "/assets/BTCECA.svg",
-  },
-  {
-    id: "5",
-    pair: "Bitcoin",
-    date: "03/08/2025",
-    time: "12:28:08",
-    contributionBRL: 2000,
-    resultBRL: -3000,
-    icon: "/assets/btcb.svg",
-  },
-  {
-    id: "6",
-    pair: "Ethereum",
-    date: "01/08/2025",
-    time: "01:25:05",
-    contributionBRL: 2000,
-    resultBRL: 5000,
-    icon: "/assets/ETC.svg",
-  },
-]
 
 type FilterType = "all" | "positive" | "negative"
 
@@ -104,15 +39,55 @@ function toCsv(operations: Operation[]): string {
     formatBRL(op.contributionBRL),
     formatBRL(op.resultBRL),
   ])
-  return [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";"))
-    .join("\n")
+  return [header, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\n")
+}
+
+function tradeToOperation(trade: Trade): Operation {
+  const date = new Date(trade.openTime)
+  return {
+    id: trade.id,
+    pair: formatCurrencyPair(trade.symbol),
+    date: date.toLocaleDateString("pt-BR"),
+    time: date.toLocaleTimeString("pt-BR"),
+    contributionBRL: trade.amount,
+    resultBRL: trade.pnl,
+  }
 }
 
 export function OperationsTable() {
   const [filter, setFilter] = useState<FilterType>("all")
-  const [operations] = useState<Operation[]>(INITIAL_OPERATIONS)
+  const [operations, setOperations] = useState<Operation[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState<number>(10)
   const [currentPage, setCurrentPage] = useState<number>(1)
+
+  useEffect(() => {
+    const fetchOperations = async () => {
+      const apiClient = createApiClient()
+      if (!apiClient) {
+        setError("API token não configurado. Configure na página de perfil.")
+        return
+      }
+
+      setIsLoading(true)
+      setError(null)
+      try {
+        // Fetch all trades (you can adjust pagination as needed)
+        const response = await apiClient.getTrades(1, 100)
+        const ops = response.data.map(tradeToOperation)
+        setOperations(ops)
+        console.log("[v0] Fetched operations:", ops.length)
+      } catch (err) {
+        console.error("[v0] Error fetching operations:", err)
+        setError(err instanceof Error ? err.message : "Erro ao carregar operações")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchOperations()
+  }, [])
 
   const filteredOperations = useMemo(() => {
     if (filter === "positive") return operations.filter((o) => o.resultBRL > 0)
@@ -124,7 +99,6 @@ export function OperationsTable() {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   useEffect(() => {
-    // Garante que a página atual sempre esteja dentro do range válido
     setCurrentPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
 
@@ -186,119 +160,154 @@ export function OperationsTable() {
               </Button>
             </div>
           </div>
-          <Button onClick={handleExport} className="bg-[#27264e] text-white border border-[rgba(174,171,216,0.35)] hover:bg-[#2f2e5a]">
+          <Button
+            onClick={handleExport}
+            className="bg-[#27264e] text-white border border-[rgba(174,171,216,0.35)] hover:bg-[#2f2e5a]"
+          >
             Exportar lista
           </Button>
         </div>
 
-        <Table className="text-[#aeabd8]">
-          <TableHeader>
-            <TableRow className="border-[#2a2959]">
-              <TableHead className="text-[#aeabd8]">Moedas</TableHead>
-              <TableHead className="text-[#aeabd8]">Data</TableHead>
-              <TableHead className="text-[#aeabd8]">Hora</TableHead>
-              <TableHead className="text-[#aeabd8]">Aporte</TableHead>
-              <TableHead className="text-[#aeabd8]">Resultado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedOperations.map((op) => {
-              const isPositive = op.resultBRL >= 0
-              return (
-                <TableRow key={op.id} className="border-[#2a2959]">
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-white">
-                      {op.icon ? (
-                        <Image src={op.icon} alt={op.pair} width={20} height={20} />
-                      ) : null}
-                      <span className="text-white">{op.pair}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{op.date}</TableCell>
-                  <TableCell>{op.time}</TableCell>
-                  <TableCell>{formatBRL(op.contributionBRL)}</TableCell>
-                  <TableCell>
-                    <div className={`inline-flex items-center gap-1 ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
-                      <Image
-                        src={isPositive ? "/assets/arrow-up.svg" : "/assets/ARROWDOWN.svg"}
-                        alt={isPositive ? "Aumento" : "Queda"}
-                        width={12}
-                        height={12}
-                      />
-                      <span>{formatBRL(Math.abs(op.resultBRL))}</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col sm:flex-row items-center justify-end gap-4 mt-4">
-          <div className="flex items-center gap-2 text-[#aeabd8]">
-            <span className="text-sm">Itens por página</span>
-            <Select
-              defaultValue={String(pageSize)}
-              onValueChange={(v) => {
-                const newSize = parseInt(v, 10)
-                setPageSize(newSize)
-                setCurrentPage(1)
-              }}
-            >
-              <SelectTrigger size="sm" className="min-w-[88px] bg-[#27264e] text-white border border-[rgba(174,171,216,0.35)]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1d1d41] text-white border border-[rgba(174,171,216,0.35)]">
-                {[10, 20, 50].map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {isLoading && <div className="text-center py-8 text-[#aeabd8]">Carregando operações...</div>}
+
+        {error && (
+          <div className="mb-4 p-3 bg-[#f2474a]/10 border border-[#f2474a]/30 rounded-lg text-[#f2474a] text-sm">
+            {error}
           </div>
-          <Pagination className="justify-end">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setCurrentPage((p) => Math.max(1, p - 1))
+        )}
+
+        {!isLoading && !error && (
+          <>
+            <Table className="text-[#aeabd8]">
+              <TableHeader>
+                <TableRow className="border-[#2a2959]">
+                  <TableHead className="text-[#aeabd8]">Moedas</TableHead>
+                  <TableHead className="text-[#aeabd8]">Data</TableHead>
+                  <TableHead className="text-[#aeabd8]">Hora</TableHead>
+                  <TableHead className="text-[#aeabd8]">Aporte</TableHead>
+                  <TableHead className="text-[#aeabd8]">Resultado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedOperations.length === 0 ? (
+                  <TableRow className="border-[#2a2959]">
+                    <TableCell colSpan={5} className="text-center py-8 text-[#aeabd8]">
+                      Nenhuma operação encontrada
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedOperations.map((op) => {
+                    const isPositive = op.resultBRL >= 0
+                    return (
+                      <TableRow key={op.id} className="border-[#2a2959]">
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-white">
+                            <span className="text-white font-medium">{op.pair}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{op.date}</TableCell>
+                        <TableCell>{op.time}</TableCell>
+                        <TableCell>{formatBRL(op.contributionBRL)}</TableCell>
+                        <TableCell>
+                          <div
+                            className={`inline-flex items-center gap-1 ${isPositive ? "text-emerald-400" : "text-rose-400"}`}
+                          >
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              className={isPositive ? "" : "rotate-180"}
+                            >
+                              <path
+                                d="M6 10L6 2M6 2L2 6M6 2L10 6"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <span>{formatBRL(Math.abs(op.resultBRL))}</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-4 mt-4">
+              <div className="flex items-center gap-2 text-[#aeabd8]">
+                <span className="text-sm">Itens por página</span>
+                <Select
+                  defaultValue={String(pageSize)}
+                  onValueChange={(v) => {
+                    const newSize = Number.parseInt(v, 10)
+                    setPageSize(newSize)
+                    setCurrentPage(1)
                   }}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                  href="#"
-                />
-              </PaginationItem>
-              {getPageItems(currentPage, totalPages).map((p, idx) => (
-                <PaginationItem key={`${p}-${idx}`}>
-                  {p === "..." ? (
-                    <PaginationEllipsis />
-                  ) : (
-                    <PaginationLink
-                      isActive={p === currentPage}
-                      href="#"
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="min-w-[88px] bg-[#27264e] text-white border border-[rgba(174,171,216,0.35)]"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1d1d41] text-white border border-[rgba(174,171,216,0.35)]">
+                    {[10, 20, 50].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Pagination className="justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
                       onClick={(e) => {
                         e.preventDefault()
-                        setCurrentPage(Number(p))
+                        setCurrentPage((p) => Math.max(1, p - 1))
                       }}
-                    >
-                      {p}
-                    </PaginationLink>
-                  )}
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                  href="#"
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      href="#"
+                    />
+                  </PaginationItem>
+                  {getPageItems(currentPage, totalPages).map((p, idx) => (
+                    <PaginationItem key={`${p}-${idx}`}>
+                      {p === "..." ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          isActive={p === currentPage}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setCurrentPage(Number(p))
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                      href="#"
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )

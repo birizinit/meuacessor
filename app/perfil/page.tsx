@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { MyBrokerAPI, type UserData } from "@/lib/api"
 
 export default function PerfilPage() {
   const router = useRouter()
@@ -18,6 +19,9 @@ export default function PerfilPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [apiToken, setApiToken] = useState("")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [userData, setUserData] = useState<UserData | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
 
   useEffect(() => {
     const authStatus = localStorage.getItem("isAuthenticated")
@@ -31,7 +35,29 @@ export default function PerfilPage() {
     if (savedImage) {
       setProfileImage(savedImage)
     }
+
+    const savedToken = localStorage.getItem("apiToken")
+    if (savedToken) {
+      setApiToken(savedToken)
+      fetchUserData(savedToken)
+    }
   }, [router])
+
+  const fetchUserData = async (token: string) => {
+    setIsLoadingUser(true)
+    setApiError(null)
+    try {
+      const api = new MyBrokerAPI(token)
+      const data = await api.getUserInfo()
+      setUserData(data)
+      console.log("[v0] User data fetched:", data)
+    } catch (error) {
+      console.error("[v0] Error fetching user data:", error)
+      setApiError(error instanceof Error ? error.message : "Failed to fetch user data")
+    } finally {
+      setIsLoadingUser(false)
+    }
+  }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -46,9 +72,10 @@ export default function PerfilPage() {
     }
   }
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (apiToken.trim()) {
       localStorage.setItem("apiToken", apiToken)
+      await fetchUserData(apiToken)
       setShowSuccessModal(true)
     }
   }
@@ -103,8 +130,20 @@ export default function PerfilPage() {
                       </svg>
                     </button>
                   </div>
-                  <div className="text-white font-semibold text-lg">Pedro Fonseca</div>
-                  <div className="text-[#aeabd8] text-sm">Conservador</div>
+                  <div className="text-white font-semibold text-lg">{userData?.name || "Pedro Fonseca"}</div>
+                  <div className="text-[#aeabd8] text-sm">{userData?.nickname || "Conservador"}</div>
+                  {userData && (
+                    <div className="mt-2 text-xs text-[#aeabd8]">
+                      <div>ID: {userData.id.slice(0, 8)}...</div>
+                      <div className="mt-1">
+                        {userData.active ? (
+                          <span className="text-[#16c784]">✓ Ativo</span>
+                        ) : (
+                          <span className="text-[#f2474a]">✗ Inativo</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -138,10 +177,20 @@ export default function PerfilPage() {
             {/* Right Side - Form */}
             <div className="bg-[#1d1d41] border border-[rgba(174,171,216,0.25)] rounded-xl p-6">
               <h3 className="text-white font-semibold mb-6">Dados</h3>
+              {apiError && (
+                <div className="mb-4 p-3 bg-[#f2474a]/10 border border-[#f2474a]/30 rounded-lg text-[#f2474a] text-sm">
+                  {apiError}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">E-mail</label>
-                  <Input placeholder="Digite" className="bg-[#141332] border-[#2a2959] text-white h-11" />
+                  <Input
+                    placeholder="Digite"
+                    value={userData?.email || ""}
+                    readOnly={!!userData}
+                    className="bg-[#141332] border-[#2a2959] text-white h-11"
+                  />
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Senha</label>
@@ -153,7 +202,12 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Nome</label>
-                  <Input placeholder="Digite" className="bg-[#141332] border-[#2a2959] text-white h-11" />
+                  <Input
+                    placeholder="Digite"
+                    value={userData?.name || ""}
+                    readOnly={!!userData}
+                    className="bg-[#141332] border-[#2a2959] text-white h-11"
+                  />
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Sobrenome</label>
@@ -161,7 +215,12 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Apelido</label>
-                  <Input placeholder="Digite" className="bg-[#141332] border-[#2a2959] text-white h-11" />
+                  <Input
+                    placeholder="Digite"
+                    value={userData?.nickname || ""}
+                    readOnly={!!userData}
+                    className="bg-[#141332] border-[#2a2959] text-white h-11"
+                  />
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">CPF</label>
@@ -169,13 +228,13 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">País</label>
-                  <Select defaultValue="">
+                  <Select value={userData?.country || ""}>
                     <SelectTrigger className="bg-[#141332] border-[#2a2959] text-white h-11">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1d1d41] text-white border-[#2a2959]">
-                      <SelectItem value="br">Brasil</SelectItem>
-                      <SelectItem value="us">Estados Unidos</SelectItem>
+                      <SelectItem value="BR">Brasil</SelectItem>
+                      <SelectItem value="US">Estados Unidos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -185,7 +244,12 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Telefone</label>
-                  <Input placeholder="(00) 0000-0000" className="bg-[#141332] border-[#2a2959] text-white h-11" />
+                  <Input
+                    placeholder="(00) 0000-0000"
+                    value={userData?.phone ? `(${userData.phoneCountryCode}) ${userData.phone}` : ""}
+                    readOnly={!!userData}
+                    className="bg-[#141332] border-[#2a2959] text-white h-11"
+                  />
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Sexo</label>
@@ -206,11 +270,12 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[#aeabd8] text-sm block mb-2">Idioma do sistema</label>
-                  <Select value="pt-br" disabled>
+                  <Select value={userData?.language || "pt-br"} disabled>
                     <SelectTrigger className="bg-[#141332] border-[#2a2959] text-white h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1d1d41] text-white border-[#2a2959]">
+                      <SelectItem value="ptBr">Português - BR</SelectItem>
                       <SelectItem value="pt-br">Português - BR</SelectItem>
                     </SelectContent>
                   </Select>
@@ -227,9 +292,10 @@ export default function PerfilPage() {
                 <div className="flex items-end">
                   <Button
                     onClick={handleConnect}
-                    className="w-full h-11 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium"
+                    disabled={isLoadingUser}
+                    className="w-full h-11 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-medium disabled:opacity-50"
                   >
-                    Conectar
+                    {isLoadingUser ? "Conectando..." : "Conectar"}
                   </Button>
                 </div>
               </div>
@@ -264,6 +330,13 @@ export default function PerfilPage() {
             <p className="text-[#aeabd8] text-sm">
               Sua conta foi vinculada com sucesso. Agora você pode utilizar a API para sincronizar suas operações.
             </p>
+            {userData && (
+              <div className="w-full bg-[#27264e] rounded-lg p-3 text-left">
+                <p className="text-white text-sm font-semibold mb-1">{userData.name}</p>
+                <p className="text-[#aeabd8] text-xs">{userData.email}</p>
+                <p className="text-[#aeabd8] text-xs mt-1">{userData.nickname}</p>
+              </div>
+            )}
             <div className="flex gap-3 w-full pt-2">
               <Button
                 onClick={() => setShowSuccessModal(false)}
