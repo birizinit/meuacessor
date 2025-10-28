@@ -37,12 +37,25 @@ export default function DashboardPage() {
 
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth())
 
-  const getInitialDateRange = () => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
+  const getDateRangeForMonth = (monthName: string) => {
+    const months = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ]
+    const monthIndex = months.indexOf(monthName)
+    const year = new Date().getFullYear()
+    const firstDay = new Date(year, monthIndex, 1)
+    const lastDay = new Date(year, monthIndex + 1, 0)
 
     const formatDate = (date: Date) => {
       const day = String(date.getDate()).padStart(2, "0")
@@ -56,7 +69,7 @@ export default function DashboardPage() {
     }
   }
 
-  const [dateRange, setDateRange] = useState(getInitialDateRange())
+  const [dateRange, setDateRange] = useState(getDateRangeForMonth(getCurrentMonth()))
 
   useEffect(() => {
     if (!loading && !user) {

@@ -34,11 +34,11 @@ export function TopOperationsCard({ dateRange, currentMonth }: TopOperationsCard
 
         const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
         const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
-        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0)
         const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
 
         const filteredTrades = response.data.filter((trade) => {
-          const tradeDate = new Date(trade.openTime)
+          const tradeDate = new Date(trade.closeTime)
           return tradeDate >= startDate && tradeDate <= endDate
         })
 
