@@ -31,13 +31,28 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
 
         const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
         const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
-        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0)
         const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59)
 
+        console.log("[v0] BalanceCard: Filtering trades between", startDate, "and", endDate)
+        console.log("[v0] BalanceCard: Total trades received:", response.data.length)
+
         const filteredTrades = response.data.filter((trade) => {
-          const tradeDate = new Date(trade.openTime)
-          return tradeDate >= startDate && tradeDate <= endDate
+          const tradeDate = new Date(trade.closeTime)
+          const isInRange = tradeDate >= startDate && tradeDate <= endDate
+
+          if (isInRange) {
+            console.log("[v0] BalanceCard: Trade included:", {
+              symbol: trade.symbol,
+              closeTime: tradeDate.toISOString(),
+              pnl: trade.pnl,
+            })
+          }
+
+          return isInRange
         })
+
+        console.log("[v0] BalanceCard: Filtered trades count:", filteredTrades.length)
 
         let data: { day: number; gain: number; loss: number; label: string }[] = []
 
@@ -45,7 +60,7 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
           const weeklyData = new Map<number, { gain: number; loss: number }>()
 
           filteredTrades.forEach((trade) => {
-            const tradeDate = new Date(trade.openTime)
+            const tradeDate = new Date(trade.closeTime)
             const dayOfMonth = tradeDate.getDate()
             const weekIndex = Math.floor((dayOfMonth - 1) / 7) + 1
 
@@ -73,7 +88,7 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
           const dailyData = new Map<number, { gain: number; loss: number }>()
 
           filteredTrades.forEach((trade) => {
-            const tradeDate = new Date(trade.openTime)
+            const tradeDate = new Date(trade.closeTime)
             const dayOfWeek = tradeDate.getDay()
 
             const existing = dailyData.get(dayOfWeek) || { gain: 0, loss: 0 }
@@ -101,7 +116,7 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
           const hourlyData = new Map<number, { gain: number; loss: number }>()
 
           filteredTrades.forEach((trade) => {
-            const tradeDate = new Date(trade.openTime)
+            const tradeDate = new Date(trade.closeTime)
             const hour = tradeDate.getHours()
 
             const existing = hourlyData.get(hour) || { gain: 0, loss: 0 }

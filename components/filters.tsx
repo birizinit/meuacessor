@@ -43,12 +43,10 @@ export function Filters({
 }: FiltersProps) {
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
+  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
 
   useEffect(() => {
     const monthIndex = months.indexOf(currentMonth)
-    const currentYear = new Date().getFullYear()
-
-    // Get first and last day of the selected month
     const firstDay = new Date(currentYear, monthIndex, 1)
     const lastDay = new Date(currentYear, monthIndex + 1, 0)
 
@@ -60,18 +58,26 @@ export function Filters({
     onDateRangeChange(newDateRange)
     setStartDate(firstDay)
     setEndDate(lastDay)
-  }, [currentMonth, onDateRangeChange])
+  }, [currentMonth, currentYear, onDateRangeChange])
 
   const handlePreviousMonth = () => {
     const currentIndex = months.indexOf(currentMonth)
-    const newIndex = currentIndex === 0 ? 11 : currentIndex - 1
-    onMonthChange(months[newIndex])
+    if (currentIndex === 0) {
+      onMonthChange(months[11])
+      setCurrentYear(currentYear - 1)
+    } else {
+      onMonthChange(months[currentIndex - 1])
+    }
   }
 
   const handleNextMonth = () => {
     const currentIndex = months.indexOf(currentMonth)
-    const newIndex = currentIndex === 11 ? 0 : currentIndex + 1
-    onMonthChange(months[newIndex])
+    if (currentIndex === 11) {
+      onMonthChange(months[0])
+      setCurrentYear(currentYear + 1)
+    } else {
+      onMonthChange(months[currentIndex + 1])
+    }
   }
 
   const handleDateSelect = (date: Date | undefined, type: "start" | "end") => {
@@ -82,6 +88,8 @@ export function Filters({
           start: format(date, "dd/MM/yyyy"),
           end: format(endDate, "dd/MM/yyyy"),
         })
+        setCurrentYear(date.getFullYear())
+        onMonthChange(months[date.getMonth()])
       }
     } else {
       setEndDate(date)
@@ -105,7 +113,9 @@ export function Filters({
             >
               <ChevronLeft className="w-5 h-5 text-[#aeabd8]" />
             </button>
-            <h3 className="font-semibold text-2xl text-white">{currentMonth}</h3>
+            <h3 className="font-semibold text-2xl text-white">
+              {currentMonth} {currentYear}
+            </h3>
             <button
               onClick={handleNextMonth}
               className="bg-[#27264e] border border-[rgba(174,171,216,0.53)] w-8 h-8 rounded-[5px] flex items-center justify-center cursor-pointer hover:bg-[#2f2e5a] transition-colors"
