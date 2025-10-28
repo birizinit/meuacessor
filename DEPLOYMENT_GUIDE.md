@@ -57,6 +57,12 @@ DATABASE_URL=sua_url_do_banco
    - Certifique-se de que as políticas RLS estão configuradas
    - Teste as permissões de usuário
 
+3. **Configurar Supabase Storage** ⚠️ IMPORTANTE
+   - Siga o guia `SUPABASE_STORAGE_SETUP.md`
+   - Crie o bucket `avatars`
+   - Configure as políticas RLS do storage
+   - **Sem isso, o upload não funcionará no Railway!**
+
 ### 5. Testar em Produção
 
 1. **Acesse a URL do Railway**

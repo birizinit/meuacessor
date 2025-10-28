@@ -144,24 +144,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadsDir = join(process.cwd(), "public", "uploads");
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
+    // Tentar salvar no Supabase Storage primeiro (melhor para produção)
+    try {
+      console.log('📤 Tentando salvar no Supabase Storage...')
+      const timestamp = Date.now();
+      const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
+      const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
+      const filePath = `profiles/${fileName}`;
+
+      // Upload para Supabase Storage
+      const { data: uploadData, error: storageError } = await supabase
+        .storage
+        .from('avatars')
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (storageError) {
+        // Se o bucket não existe, criar fallback para sistema de arquivos
+        console.log('⚠️ Erro no Supabase Storage, usando fallback:', storageError.message)
+        throw storageError;
+      }
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      console.log('✅ Imagem salva no Supabase Storage:', publicUrl)
+
+      return NextResponse.json({
+        message: "Imagem enviada com sucesso",
+        url: publicUrl,
+      });
+
+    } catch (storageError) {
+      // Fallback para sistema de arquivos local
+      console.log('📁 Usando sistema de arquivos local como fallback...')
+      
+      try {
+        const uploadsDir = join(process.cwd(), "public", "uploads");
+        if (!existsSync(uploadsDir)) {
+          await mkdir(uploadsDir, { recursive: true });
+        }
+
+        const timestamp = Date.now();
+        const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
+        const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
+        const filePath = join(uploadsDir, fileName);
+
+        await writeFile(filePath, buffer);
+
+        const publicUrl = `/uploads/${fileName}`;
+
+        console.log('✅ Imagem salva localmente:', publicUrl)
+
+        return NextResponse.json({
+          message: "Imagem enviada com sucesso",
+          url: publicUrl,
+        });
+      } catch (fileError) {
+        console.error('❌ Erro ao salvar imagem localmente:', fileError)
+        return NextResponse.json(
+          { error: "Erro ao fazer upload da imagem" },
+          { status: 500 }
+        );
+      }
     }
-
-    const timestamp = Date.now();
-    const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
-    const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
-    const filePath = join(uploadsDir, fileName);
-
-    await writeFile(filePath, buffer);
-
-    const publicUrl = `/uploads/${fileName}`;
-
-    return NextResponse.json({
-      message: "Imagem enviada com sucesso",
-      url: publicUrl,
-    });
   } catch (error) {
     console.error("Erro ao fazer upload:", error);
     return NextResponse.json(
