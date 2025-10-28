@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase"
 
 export default function PerfilPage() {
   const router = useRouter()
-  const { user, userProfile, loading } = useAuth()
+  const { user, userProfile, loading, updateUserProfile } = useAuth()
   const [profileImage, setProfileImage] = useState("/assets/Ellipse.svg")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [apiToken, setApiToken] = useState("")
@@ -216,40 +216,22 @@ export default function PerfilPage() {
         throw new Error("Usuário não autenticado")
       }
       
-      // Atualizar diretamente no Supabase usando o cliente
-      console.log('🔄 Atualizando perfil diretamente no Supabase...')
+      // Usar o contexto de autenticação para atualizar o perfil
+      console.log('🔄 Atualizando perfil via contexto de autenticação...')
       
-      // Mapear profileImage para profile_image
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      }
-      
-      if (data.profileImage) {
-        updateData.profile_image = data.profileImage
-      }
-      if (data.api_token) {
-        updateData.api_token = data.api_token
-      }
-      if (data.preferences) {
-        updateData.preferences = data.preferences
-      }
-
-      console.log('📝 Dados para atualização:', updateData)
-
-      const { data: updatedUser, error: updateError } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', user.id)
-        .select()
-        .single()
+      const { error: updateError } = await updateUserProfile({
+        profile_image: data.profileImage,
+        api_token: data.api_token,
+        preferences: data.preferences,
+      })
 
       if (updateError) {
         console.error('❌ Erro ao atualizar usuário:', updateError)
         throw new Error("Erro ao salvar no banco de dados: " + updateError.message)
       }
 
-      console.log("✅ Dados salvos com sucesso:", updatedUser)
-      return updatedUser
+      console.log("✅ Dados salvos com sucesso via contexto de autenticação")
+      return { success: true }
     } catch (error) {
       console.error("❌ Erro ao salvar no banco de dados:", error)
       throw error // Re-throw para que o chamador possa tratar o erro
