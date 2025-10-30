@@ -239,20 +239,42 @@ export default function PerfilPage() {
       
       // Usar a API diretamente ao invés do contexto
       // Obter token de acesso do Supabase
-      const { data: { session } } = await supabase.auth.getSession()
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      console.log('🔍 Debug da sessão:')
+      console.log('  - Sessão existe:', !!session)
+      console.log('  - Token existe:', !!session?.access_token)
+      console.log('  - User ID:', session?.user?.id)
+      console.log('  - Erro de sessão:', sessionError)
+      
+      if (!session || !session.access_token) {
+        console.error('⚠️ Sem sessão válida! Tentando atualizar via updateUserProfile...')
+        
+        // Fallback: usar o método do contexto
+        if (updateUserProfile) {
+          const { error } = await updateUserProfile(updateData)
+          if (error) {
+            throw new Error(error.message || "Erro ao salvar no banco de dados")
+          }
+          console.log("✅ Dados salvos com sucesso via contexto")
+          return { success: true }
+        } else {
+          throw new Error("Não foi possível salvar: sem sessão e sem contexto de autenticação")
+        }
       }
       
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-        console.log('🔑 Token de autorização incluído')
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
       }
+      
+      console.log('🔑 Token de autorização incluído:', session.access_token.substring(0, 20) + '...')
       
       const response = await fetch('/api/user', {
         method: 'PUT',
         headers,
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(updateData),
+        credentials: 'include' // Incluir cookies na requisição
       })
       
       const result = await response.json()

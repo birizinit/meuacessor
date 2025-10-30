@@ -132,30 +132,58 @@ export async function PUT(request: NextRequest) {
       }
     )
 
-    // Verificar autenticação
+    // Verificar autenticação via cookies primeiro
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    console.log('👤 Usuário autenticado:', user?.id || 'nenhum')
-    console.log('❌ Erro de autenticação:', authError?.message || 'nenhum')
+    console.log('👤 Usuário via cookies:', user?.id || 'nenhum')
+    console.log('❌ Erro via cookies:', authError?.message || 'nenhum')
     
     // Se não conseguir obter o usuário pela sessão, tentar obter pelo token de autorização
     let authenticatedUser = user
-    if (!user && !authError) {
+    
+    // Sempre tentar o token do header se não houver usuário dos cookies
+    if (!authenticatedUser) {
       console.log('🔄 Tentando obter usuário pelo token de autorização...')
       const authHeader = request.headers.get('authorization')
+      console.log('🔑 Authorization header:', authHeader ? 'presente' : 'ausente')
+      
       if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
-        if (!tokenError && tokenUser) {
+        const token = authHeader.replace('Bearer ', '').trim()
+        console.log('🎫 Token extraído:', token.substring(0, 20) + '...')
+        
+        // Criar cliente Supabase com o token
+        const supabaseWithToken = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            },
+            cookies: {
+              get() { return undefined }
+            }
+          }
+        )
+        
+        const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser()
+        
+        if (tokenError) {
+          console.error('❌ Erro ao validar token:', tokenError.message)
+        }
+        
+        if (tokenUser) {
           authenticatedUser = tokenUser
           console.log('✅ Usuário autenticado via token:', tokenUser.id)
         }
       }
     }
     
-    if (authError || !authenticatedUser) {
+    if (!authenticatedUser) {
       console.log('🚫 Acesso negado - usuário não autenticado')
-      console.log('🔍 Detalhes do erro:', authError)
+      console.log('🔍 Cookies verificados:', cookieStore.getAll().map(c => c.name).join(', '))
+      console.log('🔍 Authorization header:', request.headers.get('authorization') ? 'presente' : 'ausente')
       return NextResponse.json(
         { error: "Não autorizado" },
         { status: 401 }
@@ -163,7 +191,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { nome, sobrenome, cpf, telefone, nascimento, api_token, profileImage } = body;
+    console.log('📦 Body recebido:', JSON.stringify(body, null, 2))
+    
+    const { nome, sobrenome, cpf, telefone, nascimento, api_token, profile_image } = body;
 
     // Construir objeto de atualização apenas com campos fornecidos
     const updateData: any = {
@@ -176,7 +206,10 @@ export async function PUT(request: NextRequest) {
     if (telefone !== undefined) updateData.telefone = telefone;
     if (nascimento !== undefined) updateData.nascimento = nascimento;
     if (api_token !== undefined) updateData.api_token = api_token;
-    if (profileImage !== undefined) updateData.profile_image = profileImage;
+    if (profile_image !== undefined) {
+      updateData.profile_image = profile_image;
+      console.log('🖼️ Atualizando profile_image para:', profile_image)
+    }
 
     console.log('📝 Dados para atualização:', updateData);
 
