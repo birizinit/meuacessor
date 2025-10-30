@@ -210,6 +210,7 @@ export async function PUT(request: NextRequest) {
         telefone: updatedUser.telefone,
         nascimento: updatedUser.nascimento,
         api_token: updatedUser.api_token,
+        profile_image: updatedUser.profile_image,
         updated_at: updatedUser.updated_at,
       },
     });

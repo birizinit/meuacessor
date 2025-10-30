@@ -159,18 +159,21 @@ export default function PerfilPage() {
           // Salvar no banco de dados
           try {
             console.log('💾 Salvando imagem no banco de dados...')
-            await saveToDatabase({ profileImage: data.url })
-            console.log("✅ Imagem salva no banco de dados com sucesso")
+            console.log('📝 URL da imagem:', data.url)
             
-            // Atualizar o contexto de autenticação se possível
-            if (userProfile) {
-              const updatedProfile = { ...userProfile, profile_image: data.url }
-              // O contexto será atualizado automaticamente na próxima vez que for carregado
-              console.log('🔄 Contexto será atualizado na próxima sessão')
+            // CORREÇÃO: Usar profile_image (snake_case) ao invés de profileImage (camelCase)
+            const updateResult = await saveToDatabase({ profileImage: data.url })
+            console.log("✅ Imagem salva no banco de dados com sucesso:", updateResult)
+            
+            // Atualizar o contexto de autenticação imediatamente
+            if (updateUserProfile) {
+              console.log('🔄 Atualizando contexto de autenticação...')
+              await updateUserProfile({ profile_image: data.url })
+              console.log('✅ Contexto atualizado com sucesso')
             }
           } catch (error) {
             console.error("❌ Erro ao salvar imagem no banco:", error)
-            // A imagem já foi salva no localStorage, então não é crítico
+            setImageError("Imagem carregada mas não foi possível salvar no banco. Tente fazer login novamente.")
           }
         } else {
           console.error("❌ Erro no upload da imagem:", data)
@@ -216,22 +219,51 @@ export default function PerfilPage() {
         throw new Error("Usuário não autenticado")
       }
       
-      // Usar o contexto de autenticação para atualizar o perfil
-      console.log('🔄 Atualizando perfil via contexto de autenticação...')
+      // CORREÇÃO: Preparar dados com nomes corretos (snake_case para o banco)
+      const updateData: any = {}
       
-      const { error: updateError } = await updateUserProfile({
-        profile_image: data.profileImage,
-        api_token: data.api_token,
-        preferences: data.preferences,
+      if (data.profileImage !== undefined) {
+        updateData.profile_image = data.profileImage
+        console.log('📸 Atualizando profile_image:', data.profileImage)
+      }
+      if (data.api_token !== undefined) {
+        updateData.api_token = data.api_token
+        console.log('🔑 Atualizando api_token')
+      }
+      if (data.preferences !== undefined) {
+        updateData.preferences = data.preferences
+        console.log('⚙️ Atualizando preferences')
+      }
+      
+      console.log('📝 Dados preparados para update:', updateData)
+      
+      // Usar a API diretamente ao invés do contexto
+      // Obter token de acesso do Supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      }
+      
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+        console.log('🔑 Token de autorização incluído')
+      }
+      
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(updateData)
       })
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar usuário:', updateError)
-        throw new Error("Erro ao salvar no banco de dados: " + updateError.message)
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        console.error('❌ Erro na resposta da API:', result)
+        throw new Error(result.error || "Erro ao salvar no banco de dados")
       }
 
-      console.log("✅ Dados salvos com sucesso via contexto de autenticação")
-      return { success: true }
+      console.log("✅ Dados salvos com sucesso via API:", result)
+      return { success: true, data: result }
     } catch (error) {
       console.error("❌ Erro ao salvar no banco de dados:", error)
       throw error // Re-throw para que o chamador possa tratar o erro
