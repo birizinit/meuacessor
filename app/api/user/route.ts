@@ -37,28 +37,39 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Verificar autenticação
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Verificar autenticação - priorizar token de autorização
+    let authenticatedUser = null
+    let authError = null
     
-    console.log('👤 Usuário autenticado:', user?.id || 'nenhum')
-    console.log('❌ Erro de autenticação:', authError?.message || 'nenhum')
-    
-    // Se não conseguir obter o usuário pela sessão, tentar obter pelo token de autorização
-    let authenticatedUser = user
-    if (!user && !authError) {
-      console.log('🔄 Tentando obter usuário pelo token de autorização...')
-      const authHeader = request.headers.get('authorization')
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
-        if (!tokenError && tokenUser) {
-          authenticatedUser = tokenUser
-          console.log('✅ Usuário autenticado via token:', tokenUser.id)
-        }
+    // Primeiro, tentar autenticar via Bearer token (mais confiável para APIs)
+    const authHeader = request.headers.get('authorization')
+    if (authHeader) {
+      console.log('🔑 Tentando autenticar via Bearer token...')
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
+      if (!tokenError && tokenUser) {
+        authenticatedUser = tokenUser
+        console.log('✅ Usuário autenticado via token:', tokenUser.id)
+      } else {
+        console.log('❌ Erro ao autenticar via token:', tokenError?.message)
+        authError = tokenError
       }
     }
     
-    if (authError || !authenticatedUser) {
+    // Se não conseguiu autenticar via token, tentar via sessão de cookies
+    if (!authenticatedUser) {
+      console.log('🔄 Tentando autenticar via cookies de sessão...')
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser()
+      if (!sessionError && user) {
+        authenticatedUser = user
+        console.log('✅ Usuário autenticado via sessão:', user.id)
+      } else {
+        console.log('❌ Erro ao autenticar via sessão:', sessionError?.message)
+        authError = sessionError
+      }
+    }
+    
+    if (!authenticatedUser) {
       console.log('🚫 Acesso negado - usuário não autenticado')
       console.log('🔍 Detalhes do erro:', authError)
       return NextResponse.json(
@@ -66,6 +77,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+    
+    console.log('👤 Usuário autenticado:', authenticatedUser.id)
 
     // Buscar dados do usuário na tabela users
     console.log('🔍 Buscando perfil do usuário:', authenticatedUser.id)
@@ -132,28 +145,39 @@ export async function PUT(request: NextRequest) {
       }
     )
 
-    // Verificar autenticação
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Verificar autenticação - priorizar token de autorização
+    let authenticatedUser = null
+    let authError = null
     
-    console.log('👤 Usuário autenticado:', user?.id || 'nenhum')
-    console.log('❌ Erro de autenticação:', authError?.message || 'nenhum')
-    
-    // Se não conseguir obter o usuário pela sessão, tentar obter pelo token de autorização
-    let authenticatedUser = user
-    if (!user && !authError) {
-      console.log('🔄 Tentando obter usuário pelo token de autorização...')
-      const authHeader = request.headers.get('authorization')
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
-        if (!tokenError && tokenUser) {
-          authenticatedUser = tokenUser
-          console.log('✅ Usuário autenticado via token:', tokenUser.id)
-        }
+    // Primeiro, tentar autenticar via Bearer token (mais confiável para APIs)
+    const authHeader = request.headers.get('authorization')
+    if (authHeader) {
+      console.log('🔑 Tentando autenticar via Bearer token...')
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
+      if (!tokenError && tokenUser) {
+        authenticatedUser = tokenUser
+        console.log('✅ Usuário autenticado via token:', tokenUser.id)
+      } else {
+        console.log('❌ Erro ao autenticar via token:', tokenError?.message)
+        authError = tokenError
       }
     }
     
-    if (authError || !authenticatedUser) {
+    // Se não conseguiu autenticar via token, tentar via sessão de cookies
+    if (!authenticatedUser) {
+      console.log('🔄 Tentando autenticar via cookies de sessão...')
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser()
+      if (!sessionError && user) {
+        authenticatedUser = user
+        console.log('✅ Usuário autenticado via sessão:', user.id)
+      } else {
+        console.log('❌ Erro ao autenticar via sessão:', sessionError?.message)
+        authError = sessionError
+      }
+    }
+    
+    if (!authenticatedUser) {
       console.log('🚫 Acesso negado - usuário não autenticado')
       console.log('🔍 Detalhes do erro:', authError)
       return NextResponse.json(
@@ -161,6 +185,8 @@ export async function PUT(request: NextRequest) {
         { status: 401 }
       );
     }
+    
+    console.log('👤 Usuário autenticado:', authenticatedUser.id)
 
     const body = await request.json();
     const { nome, sobrenome, cpf, telefone, nascimento, api_token, profileImage } = body;
