@@ -58,11 +58,11 @@ export default function PerfilPage() {
       if (userProfile.profile_image) {
         console.log('🖼️ Imagem de perfil encontrada no contexto:', userProfile.profile_image)
         
-        // Corrigir URL antiga se necessário
+        // Corrigir URL antiga se necessário - remover /api/ do caminho
         let imageUrl = userProfile.profile_image
-        if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/api/uploads/')) {
-          imageUrl = imageUrl.replace('/uploads/', '/api/uploads/')
-          console.log('🔄 URL corrigida:', imageUrl)
+        if (imageUrl.startsWith('/api/uploads/')) {
+          imageUrl = imageUrl.replace('/api/uploads/', '/uploads/')
+          console.log('🔄 URL corrigida (removendo /api/):', imageUrl)
           
           // Atualizar no banco de dados
           saveToDatabase({ profileImage: imageUrl }).catch(console.error)

@@ -115,10 +115,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Carregar imagem de perfil no localStorage se existir
         if (data.profile_image) {
           console.log('🖼️ Imagem de perfil encontrada no banco, carregando no localStorage')
-          localStorage.setItem("profileImage", data.profile_image)
+          
+          // Corrigir URL antiga se necessário - remover /api/ do caminho
+          let imageUrl = data.profile_image
+          if (imageUrl.startsWith('/api/uploads/')) {
+            imageUrl = imageUrl.replace('/api/uploads/', '/uploads/')
+            console.log('🔄 URL corrigida no AuthContext:', imageUrl)
+          }
+          
+          localStorage.setItem("profileImage", imageUrl)
           
           // Disparar evento para atualizar o header
-          window.dispatchEvent(new CustomEvent("profileImageChange", { detail: data.profile_image }))
+          window.dispatchEvent(new CustomEvent("profileImageChange", { detail: imageUrl }))
         } else {
           console.log('❌ Nenhuma imagem de perfil encontrada no banco de dados')
           // Limpar localStorage se não há imagem no banco

@@ -31,10 +31,10 @@ export function Header() {
       // Primeiro verificar localStorage (mais rápido)
       const savedImage = localStorage.getItem("profileImage")
       if (savedImage) {
-        // Corrigir URL antiga se necessário
+        // Corrigir URL antiga se necessário - remover /api/ do caminho
         let imageUrl = savedImage
-        if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/api/uploads/')) {
-          imageUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+        if (imageUrl.startsWith('/api/uploads/')) {
+          imageUrl = imageUrl.replace('/api/uploads/', '/uploads/')
           localStorage.setItem("profileImage", imageUrl)
         }
         setProfileImage(imageUrl)
@@ -46,10 +46,10 @@ export function Header() {
         if (response.ok) {
           const userData = await response.json()
           if (userData.profileImage) {
-            // Corrigir URL antiga se necessário
+            // Corrigir URL antiga se necessário - remover /api/ do caminho
             let imageUrl = userData.profileImage
-            if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/api/uploads/')) {
-              imageUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+            if (imageUrl.startsWith('/api/uploads/')) {
+              imageUrl = imageUrl.replace('/api/uploads/', '/uploads/')
             }
             setProfileImage(imageUrl)
             localStorage.setItem("profileImage", imageUrl)
@@ -72,9 +72,9 @@ export function Header() {
     // Escutar eventos customizados de mudança de imagem
     const handleProfileImageChange = (event: CustomEvent) => {
       let newImageUrl = event.detail
-      // Corrigir URL antiga se necessário
-      if (newImageUrl.startsWith('/uploads/') && !newImageUrl.startsWith('/api/uploads/')) {
-        newImageUrl = newImageUrl.replace('/uploads/', '/api/uploads/')
+      // Corrigir URL antiga se necessário - remover /api/ do caminho
+      if (newImageUrl.startsWith('/api/uploads/')) {
+        newImageUrl = newImageUrl.replace('/api/uploads/', '/uploads/')
       }
       setProfileImage(newImageUrl)
       localStorage.setItem("profileImage", newImageUrl)
