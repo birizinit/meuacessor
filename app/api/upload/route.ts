@@ -145,11 +145,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Tentar salvar no Supabase Storage primeiro (melhor para produção)
+    const timestamp = Date.now();
+    const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
+    const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
+    
+    let supabaseStorageSuccess = false;
+    let publicUrl = '';
+    
     try {
       console.log('📤 Tentando salvar no Supabase Storage...')
-      const timestamp = Date.now();
-      const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
-      const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
+      console.log('📂 Bucket: avatars, Path: profiles/' + fileName)
+      
       const filePath = `profiles/${fileName}`;
 
       // Upload para Supabase Storage
@@ -162,53 +168,79 @@ export async function POST(request: NextRequest) {
         });
 
       if (storageError) {
-        // Se o bucket não existe, criar fallback para sistema de arquivos
-        console.log('⚠️ Erro no Supabase Storage, usando fallback:', storageError.message)
+        console.log('⚠️ Erro no Supabase Storage:', storageError.message)
+        console.log('⚠️ Detalhes do erro:', JSON.stringify(storageError))
         throw storageError;
       }
 
       // Obter URL pública
-      const { data: { publicUrl } } = supabase
+      const { data: urlData } = supabase
         .storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      console.log('✅ Imagem salva no Supabase Storage:', publicUrl)
+      publicUrl = urlData.publicUrl;
+      supabaseStorageSuccess = true;
+      
+      console.log('✅ Imagem salva no Supabase Storage')
+      console.log('🔗 URL pública:', publicUrl)
 
       return NextResponse.json({
         message: "Imagem enviada com sucesso",
         url: publicUrl,
+        storage: 'supabase'
       });
 
     } catch (storageError) {
       // Fallback para sistema de arquivos local
       console.log('📁 Usando sistema de arquivos local como fallback...')
+      console.log('⚠️ Motivo do fallback:', storageError instanceof Error ? storageError.message : 'Erro desconhecido')
       
       try {
         const uploadsDir = join(process.cwd(), "public", "uploads");
+        
+        console.log('📁 Diretório de uploads:', uploadsDir)
+        console.log('📁 Verificando se diretório existe...')
+        
         if (!existsSync(uploadsDir)) {
+          console.log('📁 Diretório não existe, criando...')
           await mkdir(uploadsDir, { recursive: true });
+          console.log('✅ Diretório criado')
+        } else {
+          console.log('✅ Diretório já existe')
         }
 
-        const timestamp = Date.now();
-        const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
         const filePath = join(uploadsDir, fileName);
+        console.log('📝 Salvando arquivo em:', filePath)
 
         await writeFile(filePath, buffer);
+        console.log('✅ Arquivo salvo no disco')
 
-        const publicUrl = `/uploads/${fileName}`;
+        // Verificar se o arquivo foi realmente salvo
+        if (existsSync(filePath)) {
+          console.log('✅ Arquivo verificado no disco')
+        } else {
+          console.error('❌ Arquivo não foi salvo corretamente')
+          throw new Error('Arquivo não foi salvo corretamente')
+        }
+
+        publicUrl = `/uploads/${fileName}`;
 
         console.log('✅ Imagem salva localmente:', publicUrl)
 
         return NextResponse.json({
           message: "Imagem enviada com sucesso",
           url: publicUrl,
+          storage: 'local'
         });
       } catch (fileError) {
         console.error('❌ Erro ao salvar imagem localmente:', fileError)
+        console.error('❌ Stack trace:', fileError instanceof Error ? fileError.stack : 'N/A')
         return NextResponse.json(
-          { error: "Erro ao fazer upload da imagem" },
+          { 
+            error: "Erro ao fazer upload da imagem",
+            details: fileError instanceof Error ? fileError.message : 'Erro desconhecido'
+          },
           { status: 500 }
         );
       }
