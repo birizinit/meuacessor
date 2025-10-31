@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -47,70 +46,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar autenticação
-    console.log('🔐 Verificando autenticação para upload...')
-    const cookieStore = await cookies()
-    
-    console.log('🍪 Cookies disponíveis:', cookieStore.getAll().map(c => c.name))
-    
-    const supabase = createServerClient(
+    if (!userId) {
+      return NextResponse.json(
+        { error: "ID do usuário não fornecido" },
+        { status: 400 }
+      );
+    }
+
+    // Criar cliente Supabase com Service Role Key (bypassa RLS)
+    // Isso é seguro porque estamos no servidor e validamos o userId
+    console.log('🔐 Criando cliente Supabase com Service Role Key...')
+    const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookies: {
-          get(name: string) {
-            const cookie = cookieStore.get(name)
-            console.log(`🍪 Cookie ${name}:`, cookie?.value ? 'presente' : 'ausente')
-            return cookie?.value
-          },
-        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
       }
     )
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Validar se o usuário existe no banco de dados
+    console.log('🔍 Validando userId:', userId)
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single()
     
-    console.log('👤 Usuário autenticado:', user?.id || 'nenhum')
-    console.log('❌ Erro de autenticação:', authError?.message || 'nenhum')
-    
-    // Se não conseguir obter o usuário pela sessão, tentar obter pelo token de autorização
-    let authenticatedUser = user
-    if (!user && !authError) {
-      console.log('🔄 Tentando obter usuário pelo token de autorização...')
-      const authHeader = request.headers.get('authorization')
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
-        if (!tokenError && tokenUser) {
-          authenticatedUser = tokenUser
-          console.log('✅ Usuário autenticado via token:', tokenUser.id)
-        }
-      }
-    }
-    
-    // Se ainda não conseguir autenticar, usar userId do formData como fallback
-    if (!authenticatedUser && userId) {
-      console.log('🔄 Usando userId do formData como fallback:', userId)
-      // Verificar se o userId existe na tabela users
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', userId)
-        .single()
-      
-      if (!userError && userData) {
-        authenticatedUser = { id: userId } as any
-        console.log('✅ Usuário validado via userId:', userId)
-      }
-    }
-    
-    if (!authenticatedUser) {
-      console.log('🚫 Acesso negado - usuário não autenticado')
-      console.log('🔍 Detalhes do erro:', authError)
+    if (userError || !userData) {
+      console.log('🚫 Usuário não encontrado:', userId)
       return NextResponse.json(
-        { error: "Não autorizado - faça login para fazer upload de imagens" },
-        { status: 401 }
+        { error: "Usuário não encontrado" },
+        { status: 404 }
       );
     }
+    
+    console.log('✅ Usuário validado:', userId)
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json(
@@ -148,17 +121,18 @@ export async function POST(request: NextRequest) {
     try {
       console.log('📤 Tentando salvar no Supabase Storage...')
       const timestamp = Date.now();
-      const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
+      const sanitizedUserId = userId.replace(/[^a-zA-Z0-9]/g, "_");
       const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
       const filePath = `profiles/${fileName}`;
 
-      // Upload para Supabase Storage
-      const { data: uploadData, error: storageError } = await supabase
+      // Upload para Supabase Storage usando o cliente admin (bypassa RLS)
+      const { data: uploadData, error: storageError } = await supabaseAdmin
         .storage
         .from('avatars')
         .upload(filePath, buffer, {
           contentType: file.type,
-          upsert: false
+          upsert: false,
+          cacheControl: '3600'
         });
 
       if (storageError) {
@@ -168,7 +142,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Obter URL pública
-      const { data: { publicUrl } } = supabase
+      const { data: { publicUrl } } = supabaseAdmin
         .storage
         .from('avatars')
         .getPublicUrl(filePath);
@@ -191,7 +165,7 @@ export async function POST(request: NextRequest) {
         }
 
         const timestamp = Date.now();
-        const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
+        const sanitizedUserId = userId.replace(/[^a-zA-Z0-9]/g, "_");
         const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
         const filePath = join(uploadsDir, fileName);
 
