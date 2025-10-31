@@ -6,13 +6,16 @@ import { existsSync } from "fs";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
-    const { filename } = params;
+    const { filename } = await params;
+    
+    console.log('📁 Solicitação de imagem:', filename);
     
     // Validar nome do arquivo para evitar path traversal
     if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      console.log('❌ Nome de arquivo inválido:', filename);
       return NextResponse.json(
         { error: "Nome de arquivo inválido" },
         { status: 400 }
@@ -31,6 +34,8 @@ export async function GET(
       );
     }
 
+    console.log('✅ Arquivo encontrado, enviando:', filePath);
+    
     // Ler o arquivo
     const fileBuffer = await readFile(filePath);
 

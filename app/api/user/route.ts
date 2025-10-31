@@ -223,7 +223,7 @@ export async function PUT(request: NextRequest) {
     console.log('👤 Usuário autenticado:', authenticatedUser.id)
 
     const body = await request.json();
-    const { nome, sobrenome, cpf, telefone, nascimento, api_token, profileImage } = body;
+    const { nome, sobrenome, cpf, telefone, nascimento, api_token, profile_image } = body;
 
     // Construir objeto de atualização apenas com campos fornecidos
     const updateData: any = {
@@ -236,7 +236,7 @@ export async function PUT(request: NextRequest) {
     if (telefone !== undefined) updateData.telefone = telefone;
     if (nascimento !== undefined) updateData.nascimento = nascimento;
     if (api_token !== undefined) updateData.api_token = api_token;
-    if (profileImage !== undefined) updateData.profile_image = profileImage;
+    if (profile_image !== undefined) updateData.profile_image = profile_image;
 
     console.log('📝 Dados para atualização:', updateData);
 
