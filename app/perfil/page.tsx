@@ -339,6 +339,12 @@ export default function PerfilPage() {
                       width={80}
                       height={80}
                       className="rounded-full object-cover"
+                      unoptimized={profileImage?.startsWith('http')}
+                      onError={(e) => {
+                        console.error('❌ Erro ao carregar imagem:', profileImage)
+                        const target = e.target as HTMLImageElement
+                        target.src = '/assets/Ellipse.svg'
+                      }}
                     />
                     <input
                       ref={fileInputRef}

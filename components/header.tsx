@@ -296,7 +296,19 @@ export function Header() {
                   </>
                 )}
               </div>
-              <Image src={profileImage || "/assets/Ellipse.svg"} alt="User Avatar" width={44} height={44} className="rounded-full object-cover" />
+              <Image 
+                src={profileImage || "/assets/Ellipse.svg"} 
+                alt="User Avatar" 
+                width={44} 
+                height={44} 
+                className="rounded-full object-cover"
+                unoptimized={profileImage?.startsWith('http')}
+                onError={(e) => {
+                  console.error('❌ Erro ao carregar imagem do header:', profileImage)
+                  const target = e.target as HTMLImageElement
+                  target.src = '/assets/Ellipse.svg'
+                }}
+              />
             </div>
           </div>
         </div>
