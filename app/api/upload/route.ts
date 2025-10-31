@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 
         await writeFile(filePath, buffer);
 
-        const publicUrl = `/uploads/${fileName}`;
+        const publicUrl = `/api/uploads/${fileName}`;
 
         console.log('✅ Imagem salva localmente:', publicUrl)
 
