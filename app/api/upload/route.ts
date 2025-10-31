@@ -146,11 +146,30 @@ export async function POST(request: NextRequest) {
 
     // Tentar salvar no Supabase Storage primeiro (melhor para produção)
     try {
+      // Verificar se as variáveis de ambiente estão configuradas
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      
+      console.log('🔍 Verificando configuração do Supabase Storage...')
+      console.log('   SUPABASE_URL:', supabaseUrl ? '✓ Configurada' : '✗ NÃO configurada')
+      console.log('   SUPABASE_KEY:', supabaseKey ? '✓ Configurada' : '✗ NÃO configurada')
+      
+      if (!supabaseUrl || !supabaseKey) {
+        console.log('⚠️ Variáveis de ambiente do Supabase não configuradas!')
+        console.log('   Usando fallback para sistema de arquivos local...')
+        throw new Error('Supabase não configurado')
+      }
+      
       console.log('📤 Tentando salvar no Supabase Storage...')
       const timestamp = Date.now();
       const sanitizedUserId = authenticatedUser.id.replace(/[^a-zA-Z0-9]/g, "_");
       const fileName = `profile-${sanitizedUserId}-${timestamp}.${fileExtension}`;
       const filePath = `profiles/${fileName}`;
+      
+      console.log('   Bucket: avatars')
+      console.log('   Path:', filePath)
+      console.log('   Content-Type:', file.type)
+      console.log('   Tamanho:', buffer.length, 'bytes')
 
       // Upload para Supabase Storage
       const { data: uploadData, error: storageError } = await supabase
@@ -164,6 +183,7 @@ export async function POST(request: NextRequest) {
       if (storageError) {
         // Se o bucket não existe, criar fallback para sistema de arquivos
         console.log('⚠️ Erro no Supabase Storage, usando fallback:', storageError.message)
+        console.log('   Detalhes do erro:', JSON.stringify(storageError, null, 2))
         throw storageError;
       }
 
