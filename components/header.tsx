@@ -31,7 +31,13 @@ export function Header() {
       // Primeiro verificar localStorage (mais rápido)
       const savedImage = localStorage.getItem("profileImage")
       if (savedImage) {
-        setProfileImage(savedImage)
+        // Corrigir URL antiga se necessário
+        let imageUrl = savedImage
+        if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/api/uploads/')) {
+          imageUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+          localStorage.setItem("profileImage", imageUrl)
+        }
+        setProfileImage(imageUrl)
       }
 
       // Depois buscar do banco de dados
@@ -40,8 +46,13 @@ export function Header() {
         if (response.ok) {
           const userData = await response.json()
           if (userData.profileImage) {
-            setProfileImage(userData.profileImage)
-            localStorage.setItem("profileImage", userData.profileImage)
+            // Corrigir URL antiga se necessário
+            let imageUrl = userData.profileImage
+            if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/api/uploads/')) {
+              imageUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+            }
+            setProfileImage(imageUrl)
+            localStorage.setItem("profileImage", imageUrl)
           }
         }
       } catch (error) {
@@ -60,7 +71,11 @@ export function Header() {
 
     // Escutar eventos customizados de mudança de imagem
     const handleProfileImageChange = (event: CustomEvent) => {
-      const newImageUrl = event.detail
+      let newImageUrl = event.detail
+      // Corrigir URL antiga se necessário
+      if (newImageUrl.startsWith('/uploads/') && !newImageUrl.startsWith('/api/uploads/')) {
+        newImageUrl = newImageUrl.replace('/uploads/', '/api/uploads/')
+      }
       setProfileImage(newImageUrl)
       localStorage.setItem("profileImage", newImageUrl)
     }

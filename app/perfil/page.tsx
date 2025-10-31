@@ -57,10 +57,21 @@ export default function PerfilPage() {
       // Carregar imagem de perfil se existir
       if (userProfile.profile_image) {
         console.log('🖼️ Imagem de perfil encontrada no contexto:', userProfile.profile_image)
-        setProfileImage(userProfile.profile_image)
+        
+        // Corrigir URL antiga se necessário
+        let imageUrl = userProfile.profile_image
+        if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/api/uploads/')) {
+          imageUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+          console.log('🔄 URL corrigida:', imageUrl)
+          
+          // Atualizar no banco de dados
+          saveToDatabase({ profileImage: imageUrl }).catch(console.error)
+        }
+        
+        setProfileImage(imageUrl)
         
         // Disparar evento para atualizar o header
-        window.dispatchEvent(new CustomEvent("profileImageChange", { detail: userProfile.profile_image }))
+        window.dispatchEvent(new CustomEvent("profileImageChange", { detail: imageUrl }))
       }
     }
 
