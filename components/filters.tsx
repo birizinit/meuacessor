@@ -4,7 +4,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
+import { format, startOfWeek, addDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -41,24 +41,56 @@ export function Filters({
   dateRange,
   onDateRangeChange,
 }: FiltersProps) {
-  const [startDate, setStartDate] = useState<Date>()
-  const [endDate, setEndDate] = useState<Date>()
+  const [selectedRange, setSelectedRange] = useState<{
+    from: Date | undefined
+    to: Date | undefined
+  }>({ from: undefined, to: undefined })
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
 
   useEffect(() => {
-    const monthIndex = months.indexOf(currentMonth)
-    const firstDay = new Date(currentYear, monthIndex, 1)
-    const lastDay = new Date(currentYear, monthIndex + 1, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
-    const newDateRange = {
-      start: format(firstDay, "dd/MM/yyyy"),
-      end: format(lastDay, "dd/MM/yyyy"),
+    if (selectedPeriod === "today") {
+      const todayEnd = new Date(today)
+      todayEnd.setHours(23, 59, 59, 999)
+
+      const newDateRange = {
+        start: format(today, "dd/MM/yyyy"),
+        end: format(todayEnd, "dd/MM/yyyy"),
+      }
+
+      onDateRangeChange(newDateRange)
+      setSelectedRange({ from: today, to: todayEnd })
+    } else if (selectedPeriod === "week") {
+      const weekStart = startOfWeek(today, { weekStartsOn: 1 })
+      const weekEnd = addDays(weekStart, 6)
+      weekStart.setHours(0, 0, 0, 0)
+      weekEnd.setHours(23, 59, 59, 999)
+
+      const newDateRange = {
+        start: format(weekStart, "dd/MM/yyyy"),
+        end: format(weekEnd, "dd/MM/yyyy"),
+      }
+
+      onDateRangeChange(newDateRange)
+      setSelectedRange({ from: weekStart, to: weekEnd })
+    } else {
+      const monthIndex = months.indexOf(currentMonth)
+      const firstDay = new Date(currentYear, monthIndex, 1)
+      const lastDay = new Date(currentYear, monthIndex + 1, 0)
+      firstDay.setHours(0, 0, 0, 0)
+      lastDay.setHours(23, 59, 59, 999)
+
+      const newDateRange = {
+        start: format(firstDay, "dd/MM/yyyy"),
+        end: format(lastDay, "dd/MM/yyyy"),
+      }
+
+      onDateRangeChange(newDateRange)
+      setSelectedRange({ from: firstDay, to: lastDay })
     }
-
-    onDateRangeChange(newDateRange)
-    setStartDate(firstDay)
-    setEndDate(lastDay)
-  }, [currentMonth, currentYear, onDateRangeChange])
+  }, [selectedPeriod, currentMonth, currentYear, onDateRangeChange])
 
   const handlePreviousMonth = () => {
     const currentIndex = months.indexOf(currentMonth)
@@ -80,23 +112,31 @@ export function Filters({
     }
   }
 
-  const handleDateSelect = (date: Date | undefined, type: "start" | "end") => {
-    if (type === "start") {
-      setStartDate(date)
-      if (date && endDate) {
-        onDateRangeChange({
-          start: format(date, "dd/MM/yyyy"),
-          end: format(endDate, "dd/MM/yyyy"),
-        })
-        setCurrentYear(date.getFullYear())
-        onMonthChange(months[date.getMonth()])
+  const handleRangeSelect = (
+    range:
+      | {
+          from: Date | undefined
+          to: Date | undefined
+        }
+      | undefined,
+  ) => {
+    if (range) {
+      setSelectedRange(range)
+
+      if (range.from) {
+        setCurrentYear(range.from.getFullYear())
+        onMonthChange(months[range.from.getMonth()])
       }
-    } else {
-      setEndDate(date)
-      if (startDate && date) {
+
+      if (range.from && range.to) {
+        const startDate = new Date(range.from)
+        const endDate = new Date(range.to)
+        startDate.setHours(0, 0, 0, 0)
+        endDate.setHours(23, 59, 59, 999)
+
         onDateRangeChange({
           start: format(startDate, "dd/MM/yyyy"),
-          end: format(date, "dd/MM/yyyy"),
+          end: format(endDate, "dd/MM/yyyy"),
         })
       }
     }
@@ -124,36 +164,38 @@ export function Filters({
             </button>
           </div>
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6 w-full md:w-auto">
-            <div className="flex items-center border border-[rgba(174,171,216,0.53)] rounded-[50px] p-1 bg-transparent">
+            <div className="flex items-center border border-[rgba(174,171,216,0.53)] rounded-[50px] p-1.5 bg-transparent gap-1">
               <Button
                 variant="ghost"
                 onClick={() => onPeriodChange("week")}
-                className={`rounded-[50px] px-4 py-2 text-sm transition-all ${
+                className={`rounded-[50px] px-5 py-2.5 text-sm font-medium transition-all ${
                   selectedPeriod === "week"
-                    ? "bg-[#845bf6] text-white font-medium"
-                    : "bg-transparent text-[#aeabd8] hover:bg-[#845bf6]/20"
+                    ? "bg-[#845bf6] text-white shadow-lg shadow-[#845bf6]/50"
+                    : "bg-transparent text-[#aeabd8] hover:text-white hover:bg-[#845bf6]/10"
                 }`}
               >
                 Semana
               </Button>
+              <div className="w-px h-6 bg-[rgba(174,171,216,0.3)]" />
               <Button
                 variant="ghost"
                 onClick={() => onPeriodChange("month")}
-                className={`rounded-[50px] px-4 py-2 text-sm transition-all ${
+                className={`rounded-[50px] px-5 py-2.5 text-sm font-medium transition-all ${
                   selectedPeriod === "month"
-                    ? "bg-[#845bf6] text-white font-medium"
-                    : "bg-transparent text-[#aeabd8] hover:bg-[#845bf6]/20"
+                    ? "bg-[#845bf6] text-white shadow-lg shadow-[#845bf6]/50"
+                    : "bg-transparent text-[#aeabd8] hover:text-white hover:bg-[#845bf6]/10"
                 }`}
               >
                 Mês
               </Button>
+              <div className="w-px h-6 bg-[rgba(174,171,216,0.3)]" />
               <Button
                 variant="ghost"
                 onClick={() => onPeriodChange("today")}
-                className={`rounded-[50px] px-4 py-2 text-sm transition-all ${
+                className={`rounded-[50px] px-5 py-2.5 text-sm font-medium transition-all ${
                   selectedPeriod === "today"
-                    ? "bg-[#845bf6] text-white font-medium"
-                    : "bg-transparent text-[#aeabd8] hover:bg-[#845bf6]/20"
+                    ? "bg-[#845bf6] text-white shadow-lg shadow-[#845bf6]/50"
+                    : "bg-transparent text-[#aeabd8] hover:text-white hover:bg-[#845bf6]/10"
                 }`}
               >
                 Hoje
@@ -170,28 +212,15 @@ export function Filters({
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-[#1d1d41] border-[rgba(174,171,216,0.53)]" align="end">
-                <div className="p-4 space-y-4">
-                  <div>
-                    <p className="text-sm text-[#aeabd8] mb-2">Data inicial</p>
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(date) => handleDateSelect(date, "start")}
-                      locale={ptBR}
-                      className="rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#aeabd8] mb-2">Data final</p>
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={(date) => handleDateSelect(date, "end")}
-                      locale={ptBR}
-                      className="rounded-md"
-                      disabled={(date) => (startDate ? date < startDate : false)}
-                    />
-                  </div>
+                <div className="p-4">
+                  <p className="text-sm text-[#aeabd8] mb-2">Selecione uma data</p>
+                  <Calendar
+                    mode="range"
+                    selected={selectedRange}
+                    onSelect={handleRangeSelect}
+                    locale={ptBR}
+                    className="rounded-md [&_.rdp-day_today]:bg-transparent [&_.rdp-day_today]:font-normal"
+                  />
                 </div>
               </PopoverContent>
             </Popover>

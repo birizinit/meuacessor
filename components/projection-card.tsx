@@ -16,14 +16,17 @@ interface SavedProjection {
   selectedPeriodStart?: number
   selectedPeriodEnd?: number
   investment: number
-  projection: number
+  dailyProjection: number
+  monthlyProjection: number
+  projectionPercentageDay: number
+  projectionPercentageMonth: number
   savedAt: string
 }
 
 export function ProjectionCard() {
   const router = useRouter()
   const [savedData, setSavedData] = useState<SavedProjection | null>(null)
-  const [period, setPeriod] = useState<"day" | "month">("day")
+  const [displayPeriod, setDisplayPeriod] = useState<"day" | "month">("day")
 
   useEffect(() => {
     const loadSavedProjection = () => {
@@ -32,7 +35,7 @@ export function ProjectionCard() {
         try {
           const data: SavedProjection = JSON.parse(savedProjection)
           setSavedData(data)
-          setPeriod(data.projectionPeriod)
+          setDisplayPeriod(data.projectionPeriod)
         } catch (error) {
           console.error("[v0] Error loading saved projection:", error)
         }
@@ -71,35 +74,39 @@ export function ProjectionCard() {
       return {
         percentage: 0,
         projectedValue: 0,
+        complementPercentage: 0,
+        complementValue: 0,
         investment: 0,
         riskName: "Conservador",
       }
     }
 
-    const winRate = 0.87
-    const payout = 0.6
-
-    let projectedValue = savedData.investment * winRate * payout
-
-    if (period === "month") {
-      projectedValue = projectedValue * 22
-    }
-
-    const percentageGain = (projectedValue / savedData.bankValue) * 100
-
-    return {
-      percentage: percentageGain,
-      projectedValue: projectedValue,
-      investment: savedData.investment,
-      riskName: riskProfiles[savedData.selectedRisk].name,
+    if (displayPeriod === "day") {
+      return {
+        percentage: savedData.projectionPercentageDay || 0,
+        projectedValue: savedData.dailyProjection,
+        complementPercentage: savedData.projectionPercentageMonth || 0,
+        complementValue: savedData.monthlyProjection,
+        investment: savedData.investment,
+        riskName: riskProfiles[savedData.selectedRisk].name,
+      }
+    } else {
+      return {
+        percentage: savedData.projectionPercentageMonth || 0,
+        projectedValue: savedData.monthlyProjection,
+        complementPercentage: savedData.projectionPercentageDay || 0,
+        complementValue: savedData.dailyProjection,
+        investment: savedData.investment,
+        riskName: riskProfiles[savedData.selectedRisk].name,
+      }
     }
   }
 
-  const { percentage, projectedValue, investment, riskName } = getDisplayValues()
+  const { percentage, projectedValue, complementPercentage, complementValue, investment, riskName } = getDisplayValues()
 
   const radius = 70
   const strokeWidth = 18
-  const circumference = Math.PI * radius // Semicircle length
+  const circumference = Math.PI * radius
   const fillPercentage = Math.min(Math.max(percentage, 0), 100) / 100
   const strokeDashoffset = circumference * (1 - fillPercentage)
 
@@ -118,18 +125,18 @@ export function ProjectionCard() {
           <div className="flex items-center border border-[rgba(174,171,216,0.53)] rounded-[50px] p-1">
             <Button
               variant="ghost"
-              onClick={() => setPeriod("day")}
+              onClick={() => setDisplayPeriod("day")}
               className={`rounded-[50px] px-3.5 py-1.5 text-sm ${
-                period === "day" ? "bg-[#845bf6] text-white" : "bg-transparent text-[#aeabd8]"
+                displayPeriod === "day" ? "bg-[#845bf6] text-white" : "bg-transparent text-[#aeabd8]"
               }`}
             >
               Dia
             </Button>
             <Button
               variant="ghost"
-              onClick={() => setPeriod("month")}
+              onClick={() => setDisplayPeriod("month")}
               className={`rounded-[50px] px-3.5 py-1.5 text-sm ${
-                period === "month" ? "bg-[#845bf6] text-white" : "bg-transparent text-[#aeabd8]"
+                displayPeriod === "month" ? "bg-[#845bf6] text-white" : "bg-transparent text-[#aeabd8]"
               }`}
             >
               Mês
@@ -147,7 +154,6 @@ export function ProjectionCard() {
         <>
           <div className="relative mx-auto w-[200px] h-[130px] my-3 flex flex-col items-center justify-start">
             <svg width="200" height="130" viewBox="0 0 200 130" className="absolute top-0">
-              {/* Background arc - dark shadow */}
               <path
                 d="M 30 100 A 70 70 0 0 1 170 100"
                 fill="none"
@@ -155,7 +161,6 @@ export function ProjectionCard() {
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
               />
-              {/* Progress arc - fills from left to right based on percentage */}
               <path
                 d="M 30 100 A 70 70 0 0 1 170 100"
                 fill="none"
@@ -172,8 +177,12 @@ export function ProjectionCard() {
             </svg>
 
             <div className="text-center mt-14 relative z-10">
-              <p className="text-3xl font-bold text-white">{percentage.toFixed(1)}%</p>
+              <p className="text-3xl font-bold text-white">{percentage}%</p>
               <p className="text-sm text-[#00ff88] mt-1">R${formatCurrency(projectedValue)}</p>
+              <p className="text-xs text-[#aeabd8] mt-3">
+                {displayPeriod === "day" ? "Mês:" : "Dia:"} {complementPercentage}% (R${formatCurrency(complementValue)}
+                )
+              </p>
             </div>
           </div>
 

@@ -16,8 +16,12 @@ interface SavedProjection {
   selectedDay?: number
   selectedPeriodStart?: number
   selectedPeriodEnd?: number
+  operationsPerDay?: number
   investment: number
-  projection: number
+  dailyProjection: number
+  monthlyProjection: number
+  projectionPercentageDay: number
+  projectionPercentageMonth: number
   savedAt: string
 }
 
@@ -26,6 +30,7 @@ export function CalculatorCard() {
   const [inputValue, setInputValue] = useState("125,00")
   const [selectedRisk, setSelectedRisk] = useState<RiskProfile>("conservative")
   const [projectionPeriod, setProjectionPeriod] = useState<"day" | "month">("day")
+  const [operationsPerDay, setOperationsPerDay] = useState(1)
   const [showCalendar, setShowCalendar] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -45,6 +50,7 @@ export function CalculatorCard() {
         setSelectedDay(data.selectedDay || null)
         setSelectedPeriodStart(data.selectedPeriodStart || null)
         setSelectedPeriodEnd(data.selectedPeriodEnd || null)
+        setOperationsPerDay(data.operationsPerDay || 1)
       } catch (error) {
         console.error("[v0] Error loading saved projection:", error)
       }
@@ -61,17 +67,23 @@ export function CalculatorCard() {
     return (bankValue * riskProfiles[selectedRisk].percent) / 100
   }
 
-  const calculateProjection = () => {
+  const calculateProjections = () => {
     const investment = calculateInvestment()
-    const winRate = 0.87
-    const payout = 0.6
+    const winRate = 0.8
+    const payout = 0.87
 
-    if (projectionPeriod === "day") {
-      return investment * winRate * payout
-    } else {
-      const dailyReturn = investment * winRate * payout
-      return dailyReturn * 22
+    const dailyReturn = investment * operationsPerDay * winRate * payout
+    const monthlyReturn = dailyReturn * 22
+
+    return {
+      daily: dailyReturn,
+      monthly: monthlyReturn,
     }
+  }
+
+  const calculateProjection = () => {
+    const projections = calculateProjections()
+    return projectionPeriod === "day" ? projections.daily : projections.monthly
   }
 
   const handleClear = () => {
@@ -79,6 +91,7 @@ export function CalculatorCard() {
     setInputValue("125,00")
     setSelectedRisk("conservative")
     setProjectionPeriod("day")
+    setOperationsPerDay(1)
     setSelectedDay(null)
     setSelectedPeriodStart(null)
     setSelectedPeriodEnd(null)
@@ -100,6 +113,10 @@ export function CalculatorCard() {
   }
 
   const handleConfirmOperation = () => {
+    const projections = calculateProjections()
+    const percentageDayGain = (projections.daily / bankValue) * 100
+    const percentageMonthGain = (projections.monthly / bankValue) * 100
+
     const projectionData: SavedProjection = {
       bankValue,
       selectedRisk,
@@ -107,8 +124,12 @@ export function CalculatorCard() {
       selectedDay: selectedDay || undefined,
       selectedPeriodStart: selectedPeriodStart || undefined,
       selectedPeriodEnd: selectedPeriodEnd || undefined,
+      operationsPerDay,
       investment: calculateInvestment(),
-      projection: calculateProjection(),
+      dailyProjection: projections.daily,
+      monthlyProjection: projections.monthly,
+      projectionPercentageDay: Math.round(percentageDayGain),
+      projectionPercentageMonth: Math.round(percentageMonthGain),
       savedAt: new Date().toISOString(),
     }
 
@@ -185,16 +206,19 @@ export function CalculatorCard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="bg-[rgba(2,177,90,0.15)] text-[#16c784] text-xs px-2 py-0.5 rounded-[50px]">87%</span>
-          <p className="text-xs text-[#aeabd8] leading-tight">
-            de assertividade e<br />
-            payout em média
-          </p>
+        <div className="flex gap-3">
+          <span className="bg-[rgba(2,177,90,0.15)] text-[#16c784] text-xs px-2 py-1 rounded-[50px] whitespace-nowrap">
+            80% Acertividade
+          </span>
+          <span className="bg-[rgba(2,177,90,0.15)] text-[#16c784] text-xs px-2 py-1 rounded-[50px] whitespace-nowrap">
+            87% Payout médio
+          </span>
         </div>
 
         <div>
-          <label className="block text-sm text-[#aeabd8] mb-2">Qual valor que gostaria de aportar da sua banca?</label>
+          <label className="block text-sm text-[#aeabd8] mb-2">
+            Qual valor que gostaria de aportar da sua banca por entrada?
+          </label>
           <div className="flex flex-col md:flex-row gap-1.5">
             {(Object.keys(riskProfiles) as RiskProfile[]).map((risk) => {
               const profile = riskProfiles[risk]
@@ -222,6 +246,34 @@ export function CalculatorCard() {
                 </button>
               )
             })}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-[#aeabd8] mb-1.5">Operações por dia</label>
+          <div className="flex items-center border border-[rgba(174,171,216,0.53)] rounded-[10px] px-3 py-2">
+            <button
+              onClick={() => setOperationsPerDay(Math.max(1, operationsPerDay - 1))}
+              className="text-[#845bf6] hover:text-[#845bf6]/80 font-bold text-lg"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              value={operationsPerDay}
+              onChange={(e) => {
+                const val = Number.parseInt(e.target.value) || 1
+                setOperationsPerDay(Math.max(1, val))
+              }}
+              className="bg-transparent border-none text-white text-center text-base font-bold w-full outline-none"
+              min="1"
+            />
+            <button
+              onClick={() => setOperationsPerDay(operationsPerDay + 1)}
+              className="text-[#845bf6] hover:text-[#845bf6]/80 font-bold text-lg"
+            >
+              +
+            </button>
           </div>
         </div>
 

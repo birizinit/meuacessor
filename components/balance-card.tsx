@@ -57,14 +57,13 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
         let data: { day: number; gain: number; loss: number; label: string }[] = []
 
         if (selectedPeriod === "month") {
-          const weeklyData = new Map<number, { gain: number; loss: number }>()
+          const dailyData = new Map<number, { gain: number; loss: number }>()
 
           filteredTrades.forEach((trade) => {
             const tradeDate = new Date(trade.closeTime)
             const dayOfMonth = tradeDate.getDate()
-            const weekIndex = Math.floor((dayOfMonth - 1) / 7) + 1
 
-            const existing = weeklyData.get(weekIndex) || { gain: 0, loss: 0 }
+            const existing = dailyData.get(dayOfMonth) || { gain: 0, loss: 0 }
 
             if (trade.pnl > 0) {
               existing.gain += trade.pnl
@@ -72,16 +71,18 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
               existing.loss += Math.abs(trade.pnl)
             }
 
-            weeklyData.set(weekIndex, existing)
+            dailyData.set(dayOfMonth, existing)
           })
 
-          data = Array.from({ length: 4 }, (_, i) => {
-            const weekData = weeklyData.get(i + 1) || { gain: 0, loss: 0 }
+          const daysInMonth = new Date(startYear, startMonth, 0).getDate()
+          data = Array.from({ length: daysInMonth }, (_, i) => {
+            const dayOfMonth = i + 1
+            const dayData = dailyData.get(dayOfMonth) || { gain: 0, loss: 0 }
             return {
-              day: (i + 1) * 7,
-              gain: weekData.gain,
-              loss: weekData.loss,
-              label: `Sem ${i + 1}`,
+              day: dayOfMonth,
+              gain: dayData.gain,
+              loss: dayData.loss,
+              label: `${dayOfMonth}`,
             }
           })
         } else if (selectedPeriod === "week") {
@@ -213,12 +214,49 @@ export function BalanceCard({ dateRange, selectedPeriod, currentMonth }: Balance
           </span>
           <span className="flex items-center gap-2 text-sm font-semibold text-white">
             <span className="w-3.5 h-3.5 rounded-full bg-[#f2474a]"></span>
-            Perca
+            Perda
           </span>
         </div>
         <p className="text-base text-[#8c89b4]">
-          {dateRange.start.split("/")[0]} de {getMonthAbbreviation(currentMonth)}. - {dateRange.end.split("/")[0]} de{" "}
-          {getMonthAbbreviation(currentMonth)}
+          {(() => {
+            const [startDay, startMonth, startYear] = dateRange.start.split("/").map(Number)
+            const [endDay, endMonth, endYear] = dateRange.end.split("/").map(Number)
+
+            const startMonthName = getMonthAbbreviation(
+              [
+                "Janeiro",
+                "Fevereiro",
+                "Março",
+                "Abril",
+                "Maio",
+                "Junho",
+                "Julho",
+                "Agosto",
+                "Setembro",
+                "Outubro",
+                "Novembro",
+                "Dezembro",
+              ][startMonth - 1],
+            )
+            const endMonthName = getMonthAbbreviation(
+              [
+                "Janeiro",
+                "Fevereiro",
+                "Março",
+                "Abril",
+                "Maio",
+                "Junho",
+                "Julho",
+                "Agosto",
+                "Setembro",
+                "Outubro",
+                "Novembro",
+                "Dezembro",
+              ][endMonth - 1],
+            )
+
+            return `${startDay} de ${startMonthName}. - ${endDay} de ${endMonthName}`
+          })()}
         </p>
       </div>
 
